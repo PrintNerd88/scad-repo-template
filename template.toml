@@ -1,0 +1,57 @@
+# template.toml -- what this template ships, and how each file is kept in sync
+# with the projects created from it. Read by scripts/template_sync.py, which
+# never ships to children; see that script's docstring for the mechanics.
+#
+#   managed  the template owns it; local edits are drift (an error)
+#   merge    both sides edit it; 3-way merged on update, conflicts left as markers
+#   seed     copied once by `new`, then never looked at again
+#   exclude  never leaves this repo
+#
+# Every tracked file must fall under exactly one rule -- `make template-validate`
+# enforces it, so adding a file forces a decision here.
+
+manifest_format = 1
+
+# Tracked here, never shipped. (A bare key like this must precede every [table].)
+exclude = [
+  "template.toml",
+  "scripts/template_sync.py",
+  "scripts/template_sync_test.py",
+]
+
+# Literal in this repo -> key in a child's .template.toml [values]. Substituted in
+# file contents and in paths. `new` defaults `project` to the child's directory
+# name and every other key to the literal itself (so an unset placeholder stays a
+# visible placeholder).
+[tokens]
+"scad-repo-template" = "project"
+"<COPYRIGHT HOLDER>" = "copyright_holder"
+
+[base]
+managed = [
+  ".github/workflows/render.yml",
+  ".gitignore",
+  ".gitmodules",
+  ".pre-commit-config.yaml",
+]
+merge = [
+  "AGENTS.md",  # projects add their own rules
+  "Makefile",   # projects add their own targets (README: "add explicit targets")
+]
+seed = [
+  "README.md",
+  "LICENSE",
+  "docs/preview.png",
+  "lib/common.scad",
+  "presets/example.json",
+  "scad-repo-template.code-workspace",
+  "scripts/.gitkeep",
+  "src/*.scad",
+  "tests/common.scad",
+]
+
+# Optional features go in [features.<name>] tables with the same managed/merge/
+# seed lists, plus `description`, `default` (true) and `requires = [...]`. A
+# child declines one in its .template.toml [features]; its files are then not
+# tracked, and <template-only feature="<name>"> blocks are stripped for it.
+# This template declares none yet.

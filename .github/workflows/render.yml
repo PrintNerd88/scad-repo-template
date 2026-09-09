@@ -47,3 +47,15 @@ jobs:
         with:
           name: renders-${{ matrix.toolchain }}
           path: out/
+# <template-only>
+  # Template maintenance, stripped from children by scripts/template_sync.py:
+  # the manifest must classify every tracked file, and the sync tool's own
+  # tests must pass. Needs only the runner's python3 and git.
+  validate:
+    name: template manifest + sync tool
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: make template-validate
+      - run: make template-test
+# </template-only>

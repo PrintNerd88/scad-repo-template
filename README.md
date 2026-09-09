@@ -23,6 +23,12 @@ Already cloned without `--recurse-submodules`? Run `git submodule update --init`
 If you used GitHub's **Use this template** button, submodules are not copied — run
 `git submodule update --init` after the first clone.
 
+<!-- <template-only> -->
+To start a *new project* from this template, use `scripts/template_sync.py new` (see
+[Project setup](#project-setup)) rather than cloning or the template button: it also
+writes the `.template.toml` that later keeps the project in sync with the template.
+<!-- </template-only> -->
+
 ### Requirements
 
 - **OpenSCAD.** The build prefers `openscad-nightly` and falls back to a stable
@@ -144,18 +150,54 @@ Fill in per project: material, layer height, orientation, supports, infill.
 `out/` is gitignored. Attach STLs to a GitHub release from a tag-triggered job instead of
 committing binaries.
 
-## New project checklist
+## Project setup
 
-1. `git clone --recurse-submodules <template> <name>`.
-2. Rename `src/example.scad` and its `mounting_plate()` module; update this README's title,
-   purpose, and parameter table.
-3. Update `presets/example.json` to match.
-4. `pre-commit install`.
-5. Confirm the toolchain: `make toolchain`, then `make test` and `make stl`.
-6. Verify `out/` is ignored: `git status` shows no STL after step 5.
-7. Replace `docs/preview.png` (`make png && cp out/<part>.png docs/preview.png`).
-8. Choose a license — the bundled `LICENSE` is MIT with a placeholder copyright holder.
-9. First commit with a Conventional Commits scope.
+<!-- <template-only> -->
+From a checkout of this template (needs `python3` ≥ 3.11 and `git`; no Python ends up
+in the new project):
+
+```bash
+python3 scripts/template_sync.py new ../myproject            # prompts for values
+python3 scripts/template_sync.py new ../myproject -y --set project=myproject --set 'copyright_holder=Jane Doe'
+make template-new CHILD=../myproject                          # same thing
+```
+
+That copies the files, substitutes the project name and copyright holder, adds the
+`vendor/` submodules at this template's pinned commits, writes `.template.toml`, and
+stages everything on a fresh `main` branch. Then, in the new project:
+<!-- </template-only> -->
+
+1. Review `git status` and make the first commit (Conventional Commits scope).
+2. `pre-commit install`.
+3. Confirm the toolchain: `make toolchain`, then `make test` and `make stl`.
+4. Verify `out/` is ignored: `git status` shows no STL after step 3.
+5. Replace `src/example.scad` and its `mounting_plate()` module; update this README's
+   title, purpose, and parameter table, and `presets/example.json` to match.
+6. Replace `docs/preview.png` (`make png && cp out/<part>.png docs/preview.png`).
+7. Check `LICENSE` — MIT; the copyright holder is whatever was given at setup, or
+   still the template's placeholder if nothing was.
+
+## Staying in sync with the template
+
+`.template.toml` records which template this project came from and the template commit
+it was last synced to. From a checkout of the template:
+
+```bash
+python3 scripts/template_sync.py check  ../myproject    # what changed; writes nothing
+python3 scripts/template_sync.py update ../myproject    # apply it and bump the pin
+```
+
+Each template file has a strategy, set in the template's `template.toml`:
+
+| Strategy | Files | On update |
+|---|---|---|
+| `managed` | `.gitignore`, `.pre-commit-config.yaml`, `.gitmodules`, CI | Always brought to the template's version. Change them in the template, not here — a local edit is reported as drift. |
+| `merge` | `Makefile`, `AGENTS.md` | Yours to extend; template changes are 3-way merged in. Conflicts are left as markers to resolve, like a git merge. |
+| `seed` | the demo part, presets, tests, this README, `LICENSE` | Copied once at setup, never touched again. |
+
+Override any file's strategy in `.template.toml` `[overrides]` — e.g. `".gitignore" = "merge"`
+to add your own ignores, or `"Makefile" = "ignore"` once you have forked it for good.
+`update` refuses to run on a dirty tree, so every sync is one reviewable commit.
 
 ## License
 

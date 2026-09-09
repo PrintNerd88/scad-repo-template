@@ -18,6 +18,9 @@ OPENSCAD ?= $(OPENSCAD_AUTO)
 
 # Goals that never shell out to OpenSCAD, so they must work with none installed.
 NO_SCAD_GOALS := clean help toolchain
+# <template-only>
+NO_SCAD_GOALS += template-validate template-test template-check template-update template-new
+# </template-only>
 ifneq ($(filter-out $(NO_SCAD_GOALS),$(or $(MAKECMDGOALS),all)),)
   ifeq ($(strip $(OPENSCAD)),)
     $(error No OpenSCAD found on PATH. Looked for: $(OPENSCAD_CANDIDATES). \
@@ -99,3 +102,23 @@ out:
 
 clean:
 	rm -rf out
+# <template-only>
+# Template maintenance. Everything between these markers is stripped from
+# children by scripts/template_sync.py, which never ships to them either.
+#   make template-validate           template.toml classifies every tracked file
+#   make template-test               unit tests for the sync tool
+#   make template-new CHILD=path     create a project from this template
+#   make template-check CHILD=path   report a child's drift and pending updates
+#   make template-update CHILD=path  apply template changes to a child
+# Extra flags go in ARGS, e.g. ARGS='--set project=foo -y'.
+CHILD ?=
+ARGS  ?=
+.PHONY: template-validate template-test template-new template-check template-update
+template-validate:
+	python3 scripts/template_sync.py validate
+template-test:
+	python3 -B -m unittest scripts/template_sync_test.py
+template-new template-check template-update: template-%:
+	@test -n "$(CHILD)" || { echo "usage: make template-$* CHILD=path/to/child [ARGS='...']"; exit 2; }
+	python3 scripts/template_sync.py $* $(CHILD) $(ARGS)
+# </template-only>

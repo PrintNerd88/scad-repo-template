@@ -64,3 +64,23 @@ These are load-bearing; do not "simplify" them away.
   namespace, so passing it a path under `/tmp` looks like a missing file — and a missing
   file exits 1, which is easy to misread as a test failure. Keep scratch `.scad` files
   inside the repo.
+
+<!-- <template-only> -->
+## Template maintenance
+
+This repo is a template. `scripts/template_sync.py` creates child projects from it
+and keeps them in sync; children never receive the script, only a `.template.toml`.
+This whole section is stripped from children.
+
+- Every tracked file must be classified in `template.toml` as `managed`, `merge`,
+  `seed`, or `exclude`. `make template-validate` enforces it; run that and
+  `make template-test` before proposing changes.
+- Anything that must not reach children — template-only Makefile targets, CI jobs,
+  this section — goes between marker lines written in the file's comment syntax,
+  `# <template-only>` … `# </template-only>` (or `<!-- … -->` in Markdown). A marker
+  must be the only thing on its line; blocks must be balanced and cannot nest.
+- `scad-repo-template` and `<COPYRIGHT HOLDER>` are tokens (`[tokens]` in
+  `template.toml`), replaced by each child's values in contents and paths. Do not
+  reword them, and do not introduce the project name in other spellings.
+- Template-specific knowledge belongs in `template.toml`, never in the script.
+<!-- </template-only> -->
