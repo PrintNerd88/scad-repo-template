@@ -1,0 +1,49 @@
+name: render
+on: [push, pull_request]
+
+jobs:
+  render:
+    # Both toolchains are built, because version differences here are real:
+    # BOSL2's diff()/tag() asserts on 2025+ where 2021.01 silently rendered
+    # nothing, and only the nightly has the manifold backend. Each job installs
+    # exactly one binary and then runs plain `make`, so the Makefile's own
+    # nightly-preferred-with-fallback resolution is what's under test.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - toolchain: nightly
+            install: sudo snap install openscad-nightly
+          - toolchain: stable
+            install: |
+              sudo add-apt-repository -y ppa:openscad/releases
+              sudo apt-get update
+              sudo apt-get install -y openscad
+
+    name: render (${{ matrix.toolchain }})
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install OpenSCAD (${{ matrix.toolchain }})
+        run: ${{ matrix.install }}
+
+      - name: Install xvfb
+        run: sudo apt-get install -y xvfb
+
+      # Fails loudly if resolution picked the wrong binary or no binary.
+      - run: make toolchain
+
+      - run: make test
+      - run: make stl
+
+      # PNG export needs a display on most builds.
+      - run: xvfb-run make png
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: renders-${{ matrix.toolchain }}
+          path: out/

@@ -1,0 +1,27 @@
+# No widely adopted OpenSCAD formatter or linter exists; openscad-format
+# (clang-format-based) does, but verify it is maintained before adopting it.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-added-large-files
+        args: [--maxkb=500]   # catches accidental STL commits
+      - id: check-json         # presets/
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+  - repo: local
+    hooks:
+      - id: openscad-syntax
+        name: openscad syntax check
+        # A full render is the only syntax check OpenSCAD offers, so this is
+        # slow on large parts. If that bites, narrow to:
+        #   files: '^(lib|tests)/.*\.scad$'
+        # and let CI cover src/.
+        entry: bash -c 'for f in "$@"; do openscad --export-format=echo -o /dev/null "$f" || exit 1; done' --
+        language: system
+        files: '\.scad$'
+        exclude: '^vendor/'
