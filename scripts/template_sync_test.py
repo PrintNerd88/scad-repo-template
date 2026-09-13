@@ -746,10 +746,21 @@ class SyncTests(unittest.TestCase):
         index = sh(other, "git", "ls-files", "-s", "vendor/lib")
         self.assertIn("160000", index)
         self.assertIn(sha, index)
+        # Nothing committed yet: the submodule is staged, not missing.
+        code, out, err = run("--template", self.fx.template, "check", other, "--all")
+        self.assertEqual(code, 0, err)
+        self.assertIn(f"submodule vendor/lib: in sync at {sha[:7]}", out)
         commit_all(other, "initial")
         code, out, err = run("--template", self.fx.template, "check", other, "--all")
         self.assertEqual(code, 0, err)
         self.assertIn(f"submodule vendor/lib: in sync at {sha[:7]}", out)
+        # Created without submodules, it really is missing, and check says how to add it.
+        bare = self.fx.dir / "bare"
+        code, _out, err = run("--template", self.fx.template, "new", bare, "-y", "--no-submodules")
+        self.assertEqual(code, 0, err)
+        code, out, err = run("--template", self.fx.template, "check", bare)
+        self.assertEqual(code, 0, err)
+        self.assertIn("submodule vendor/lib: not in the child (git submodule add ", out)
 
 
 class RealTemplateTests(unittest.TestCase):

@@ -113,10 +113,6 @@ def is_git_repo(root: Path) -> bool:
     return git(root, "rev-parse", "--show-toplevel", check=False).returncode == 0
 
 
-def has_head(root: Path) -> bool:
-    return git(root, "rev-parse", "--verify", "-q", "HEAD", check=False).returncode == 0
-
-
 @dataclass(frozen=True)
 class Tracked:
     path: str
@@ -181,6 +177,17 @@ def gitlink_sha(root: Path, treeish: str, path: str) -> str | None:
         return None
     meta = proc.stdout.split("\t", 1)[0].split()
     return meta[2] if meta[0] == GITLINK_MODE else None
+
+
+def staged_gitlink_sha(root: Path, path: str) -> str | None:
+    """The commit ``path`` is staged at as a submodule in ``root``'s index, or ``None``.
+
+    The index rather than HEAD, so a project fresh from `new` -- submodules
+    added, nothing committed yet -- doesn't read as missing them.
+    """
+    proc = git(root, "ls-files", "-s", "--", path, check=False)
+    meta = proc.stdout.split("\t", 1)[0].split()
+    return meta[1] if proc.returncode == 0 and len(meta) > 1 and meta[0] == GITLINK_MODE else None
 
 
 def submodule_entries(root: Path) -> list[tuple[str, str, str]]:
@@ -922,13 +929,13 @@ def build_plan(manifest: Manifest, cfg: ChildConfig, *, include_seed: bool) -> S
             r.change = include_seed
 
     submodules = []
-    child_has_head = is_git_repo(cfg.root) and has_head(cfg.root)
+    child_is_repo = is_git_repo(cfg.root)
     urls = {spath: url for _name, spath, url in submodule_entries(root)}
     for t in tracked:
         if not t.gitlink:
             continue
         tsha = gitlink_sha(root, "HEAD", t.path) or "?"
-        csha = gitlink_sha(cfg.root, "HEAD", t.path) if child_has_head else None
+        csha = staged_gitlink_sha(cfg.root, t.path) if child_is_repo else None
         if csha is None:
             submodules.append(f"submodule {t.path}: not in the child (git submodule add {urls.get(t.path, '<url>')} {t.path})")
         elif csha != tsha:
