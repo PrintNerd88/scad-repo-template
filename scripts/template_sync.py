@@ -693,8 +693,8 @@ def render_child_config(
         "[overrides]",
         "# Per-file strategy overrides, keyed by path as listed in the template's",
         "# template.toml: managed, merge, seed, or ignore. For example:",
-        '#   ".pre-commit-config.yaml" = "merge"    # I add my own hooks; merge template changes in',
-        '#   "Makefile" = "ignore"                  # forked for good; stop tracking it',
+        '#   ".gitignore" = "merge"    # I add my own ignores; merge template changes in',
+        '#   "Makefile" = "ignore"     # forked for good; stop tracking it',
         "",
     ]
     return "\n".join(lines)

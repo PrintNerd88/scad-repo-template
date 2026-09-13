@@ -12,8 +12,8 @@ Every file a project gets from the template has an owner, set in the template's
 
 | Strategy | Owner | For example | On sync |
 |---|---|---|---|
-| `managed` | The template | CI workflows, the pre-commit config | Made to match the template; an edit in the project is reported as drift |
-| `merge` | Both | `.gitignore`, `Makefile`, `AGENTS.md`, `mkdocs.yml` | The template's changes are merged with the project's, as in a git merge |
+| `managed` | The template | CI workflows, `.gitignore`, the pre-commit config | Made to match the template; an edit in the project is reported as drift |
+| `merge` | Both | `Makefile`, `AGENTS.md`, `mkdocs.yml` | The template's changes are merged with the project's, as in a git merge |
 | `seed` | The project | Parts, libraries, tests, the README and documentation pages | Left alone once the project is created |
 
 A project's `.template.toml` pins the template commit it last synced with. Comparing the

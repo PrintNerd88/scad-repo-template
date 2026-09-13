@@ -40,11 +40,11 @@ exclude = [
 [base]
 managed = [
   ".github/workflows/render.yml",
+  ".gitignore",
   ".gitmodules",
   ".pre-commit-config.yaml",
 ]
 merge = [
-  ".gitignore",               # projects add their own ignores
   "AGENTS.md",                # projects add their own rules
   "Makefile",                 # projects add their own targets, e.g. for variants
 ]
