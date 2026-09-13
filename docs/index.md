@@ -6,9 +6,9 @@ convention, so this is a self-contained repo that renders headlessly and reprodu
 
 It gives a project a fixed layout, a Makefile that renders STLs and previews with
 whichever OpenSCAD is installed, assert-based tests, pre-commit hooks, CI on both the
-nightly and stable toolchains, and a documentation site built with MkDocs for GitHub
-Pages. Projects created from the template can pull in its later changes with a small
-sync tool.
+nightly and stable toolchains, a README, and optionally a documentation site built with
+MkDocs for GitHub Pages. Projects created from the template can pull in its later
+changes with a small sync tool.
 
 The included part is a demo — a parametric mounting plate, annotated section by
 section with the convention it illustrates. Replace it.
@@ -38,13 +38,14 @@ section with the convention it illustrates. Replace it.
 Alongside these sit `README.md`, `LICENSE`, `.gitignore`, `.gitmodules` (the submodule
 URLs), and a VS Code workspace file.
 
-<!-- <template-only> -->
+A project gets the documentation site — the pages in `docs/`, `mkdocs.yml`, `make docs`
+and the `docs.yml` workflow — only if it asks for one when it is created; otherwise its
+README is its documentation. Either way, it starts from generic pages, not these.
 
-The template itself has three more files, none of which reach a project:
-`template.toml`, which says how each file is kept in sync, and the sync tool
-`scripts/template_sync.py` with its tests.
-
-<!-- </template-only> -->
+The template itself has more files that never reach a project as they are:
+`template.toml`, which says how each file is kept in sync; the sync tool
+`scripts/template_sync.py` and its tests; its own `README.md` and the pages of this
+site; and `child/`, the generic README and documentation pages a project gets instead.
 
 A part in `src/` pulls in modules from `lib/` and `vendor/` by relative path, never
 through `OPENSCADPATH`, so every checkout renders the same way — from `make`, in CI, or
@@ -61,7 +62,7 @@ by double-clicking the file.
 | [Python](https://www.python.org/) | The language of the tooling, never of the parts: pre-commit, MkDocs, and the template sync tool. |
 | [uv](https://docs.astral.sh/uv/) | Installs and runs every Python tool, along with the Python version it needs, so nothing is installed into the repository. |
 | [pre-commit](https://pre-commit.com/) | Checks every commit: fixes trailing whitespace and final newlines, rejects files over 500 KB (usually an STL committed by accident), checks presets parse as JSON, scans for credentials with [detect-secrets](https://github.com/Yelp/detect-secrets), and evaluates each changed `.scad` file with OpenSCAD. |
-| [MkDocs](https://www.mkdocs.org/) with [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) | Builds this site from the Markdown in `docs/`. `make docs` runs pinned versions of both through uv. |
+| [MkDocs](https://www.mkdocs.org/) with [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) | Builds this site from the Markdown in `docs/`, and a project's site if it has one. `make docs` runs pinned versions of both through uv. |
 | [GitHub Actions](https://docs.github.com/en/actions) | CI: tests and renders every push on both OpenSCAD toolchains, uploads the renders, and builds the documentation. |
 | [GitHub Pages](https://docs.github.com/en/pages) | Hosts the documentation site, published from `main` by the docs workflow. |
 | [Xvfb](https://www.x.org/) | A virtual display, so PNG previews render without a screen (`xvfb-run make png`) — in CI, or on a headless machine. |

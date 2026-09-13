@@ -6,9 +6,9 @@ convention, so this is a self-contained repo that renders headlessly and reprodu
 
 It gives a project a fixed layout, a Makefile that renders STLs and previews with
 whichever OpenSCAD is installed, assert-based tests, pre-commit hooks, CI on both the
-nightly and stable toolchains, and a documentation site built with MkDocs for GitHub
-Pages. Projects created from the template can pull in its later changes with a small
-sync tool.
+nightly and stable toolchains, a README, and optionally a documentation site built with
+MkDocs for GitHub Pages. Projects created from the template can pull in its later
+changes with a small sync tool.
 
 The included part is a demo — a parametric mounting plate, annotated section by
 section with the convention it illustrates. Replace it.

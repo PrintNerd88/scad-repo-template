@@ -1,0 +1,54 @@
+# Development
+
+Everything runs through `make` from the repository root. The rules each directory
+follows are in `AGENTS.md`, also at the repository root.
+
+## Build and test
+
+| Command | Result |
+|---|---|
+| `make` / `make stl` | Renders every `src/*.scad` to `out/*.stl` |
+| `make png` | Renders previews to `out/*.png`; without a display, `xvfb-run make png` |
+| `make test` | Runs `tests/*.scad` |
+| `make docs` | Builds this documentation into `site/`, failing on any warning |
+| `make docs-serve` | Serves it at <http://127.0.0.1:8000>, rebuilding on every save |
+| `make toolchain` | Shows which OpenSCAD is in use |
+| `make clean` | Removes `out/` and `site/` |
+| `make help` | Lists the targets |
+
+`make OPENSCAD=openscad` picks a specific binary. OpenSCAD exits 0 even when an
+`assert()` fails, so `make test` fails on any `ERROR`, `WARNING` or `TRACE` in its output
+instead.
+
+## Third-party libraries
+
+Libraries are git submodules under `vendor/`, referenced by relative path and never
+edited. Bump one deliberately:
+
+```bash
+git submodule update --remote vendor/<library>
+git commit -am "build(vendor): bump <library>"
+```
+
+## Documentation
+
+This site is the Markdown in `docs/`, built with MkDocs and the Material theme. Page
+order is the `nav` list in `mkdocs.yml`; add new pages there.
+
+The `docs` workflow builds the site on every push and pull request, and publishes it to
+GitHub Pages from `main`. Publishing needs two one-time steps:
+
+1. In the repository's **Settings → Pages**, set **Source** to **GitHub Actions**.
+2. In `mkdocs.yml`, uncomment `site_url` and `repo_url`, and replace `<GITHUB USER>` with
+   the account or organisation that owns the repository.
+
+## Syncing with the template
+
+This project was created from a template; `.template.toml` records the template commit
+it was last synced with. To bring in the template's later changes, commit your work,
+then run the template's sync tool from a checkout of it — here, `../template`:
+
+```bash
+uv run ../template/scripts/template_sync.py check .     # what would change
+uv run ../template/scripts/template_sync.py update .    # apply it, then review and commit
+```

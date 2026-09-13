@@ -1,160 +1,81 @@
 # Syncing with the template
 
-A project created from the template remembers where it came from, so the template's
-later changes — CI fixes, new Makefile targets, documentation updates — can be pulled
-into it without copying files by hand, and without losing the project's own edits.
+Projects created from the template keep receiving its improvements — CI fixes, new
+Makefile targets, tooling updates — without copying files by hand and without losing
+their own changes. Syncing is a pull: a project gets nothing until someone runs the sync
+tool on it, so each project moves to a newer template when it is ready.
 
 ## How it works
 
-- The **template** holds `template.toml`, which gives every file it ships a *strategy*,
-  and the sync tool, `scripts/template_sync.py`. Neither is copied into projects.
-- A **project** holds `.template.toml`: where the template lives, the template commit the
-  project was last synced with (the *pin*), the values that replaced the template's
-  placeholders, and any per-file overrides.
-- The tool runs from a checkout of the template and is pointed at a project. For each
-  file it compares three versions — the template at the pin, the template now, and the
-  project's copy — which is how it tells a template change apart from a local edit.
+Every file a project gets from the template has an owner, set in the template's
+`template.toml`:
 
-## Strategies
+| Strategy | Owner | For example | On sync |
+|---|---|---|---|
+| `managed` | The template | CI workflows, `.gitignore`, the pre-commit config | Made to match the template; an edit in the project is reported as drift |
+| `merge` | Both | `Makefile`, `AGENTS.md`, `mkdocs.yml` | The template's changes are merged with the project's, as in a git merge |
+| `seed` | The project | Parts, libraries, tests, the README and documentation pages | Left alone once the project is created |
 
-| Strategy | Files | On update |
-|---|---|---|
-| `managed` | `.gitignore`, `.gitmodules`, `.pre-commit-config.yaml`, both CI workflows, `docs/requirements.txt`, and this page | The template owns these. They are always brought to the template's version, and a local edit is reported as drift — make the change in the template instead. |
-| `merge` | `Makefile`, `AGENTS.md`, `mkdocs.yml`, and the Home, Getting started and Development pages | Yours to extend. Template changes are 3-way merged in; where both sides changed the same lines, the file gets conflict markers to resolve, as in a git merge. |
-| `seed` | Everything in `src/`, `lib/`, `tests/` and `presets/`, `README.md`, `LICENSE`, the Parts page, `docs/preview.png`, and the workspace file | Copied once when the project is created, then never touched again. |
+A project's `.template.toml` pins the template commit it last synced with. Comparing the
+template at the pin, the template now, and the project's own copy is how the tool tells a
+template change from a local edit, so one arrives without overwriting the other. Each
+sync moves the pin to the template's current commit.
 
-The template's `template.toml` lists every file.
+## Sync a child project
 
-## Before you start
-
-You need uv, git, and an up-to-date clone of the template. The project's
-`.template.toml` records the template's URL.
+Commit the project's work first: `update` won't run over uncommitted changes, so each
+sync is a single reviewable diff. Then, from the project, with the template checked out
+beside it:
 
 ```bash
-git clone <template-url> ../template      # the first time
-git -C ../template pull                   # afterwards
-```
+# pull the latest version of the template
+git -C ../template pull
 
-Commit your work in the project first: `update` refuses to run on uncommitted changes,
-so that each sync is one reviewable diff.
-
-## Check
-
-```bash
+# check what would change
 uv run ../template/scripts/template_sync.py check .
-```
 
-`check` writes nothing. It lists each file that isn't up to date, compares each
-submodule's commit with the template's, and ends with a summary.
-
-| Status | Meaning | What `update` does |
-|---|---|---|
-| `update` | Changed in the template, untouched in the project | Takes the template's version |
-| `merged` | Changed on both sides, in different places | Writes the merged file |
-| `conflict` | Changed on both sides, in the same place | Writes the file with conflict markers |
-| `new` | Added to the template | Adds it |
-| `delete` | Removed from the template, unchanged in the project | Deletes it |
-| `drift` | A `managed` file edited in the project | Overwrites it with the template's version |
-| `local` | Edited only in the project | Nothing |
-| `removed-upstream` | Removed from the template, but edited in the project | Nothing; the file is kept |
-| `seed-available` | A `seed` file added to the template | Adds it only with `--seed` |
-| `markers` | Conflict markers left from an earlier update | Refuses to run until they are resolved |
-| `ignored` | Skipped by `[overrides]` | Nothing |
-
-`--all` also lists the files that are up to date. `check` exits `0` when nothing is wrong
-— pending updates alone are fine — `1` on drift, a conflict or leftover markers, and `2`
-on a configuration error; `--strict` also exits `1` while updates are pending.
-
-## Update
-
-```bash
+# apply changes
 uv run ../template/scripts/template_sync.py update .
-git status && git diff                      # review what changed
-git add -A && git commit -m "chore: sync with template"
 ```
 
-`update` makes every change in the table above, then moves the pin in `.template.toml`
-to the template's current commit. It exits `0` when everything applied cleanly, `1` when
-some files have conflicts, and `2` when it refused to run.
+Review the result and commit it. The output lists every file that isn't up to date; two
+outcomes need your attention:
 
-### Conflicts
+- **Conflict:** the template and the project changed the same lines of a shared file,
+  which is written with conflict markers. Resolve them as after a git merge.
+- **Drift:** a file the template owns was edited in the project, and `update` restores
+  the template's version. Make the change in the template instead, or take the file over.
 
-A conflicted file holds git-style conflict markers around three versions of each
-disputed passage: `yours` (the project's), `template@<old pin>` (the common ancestor),
-and `template@<new pin>` (the template now). Edit each passage down to the text you
-want, then commit. The pin has already moved, so the change isn't offered again;
-`check` reports any markers you missed, and `update` won't run until they are gone.
+Vendored libraries are compared, never changed: a submodule at a different commit from
+the template's is reported, and bumping it stays a deliberate commit — see
+[Third-party libraries](development.md#third-party-libraries).
 
-## Overrides
+## Taking a file over
 
-A project can change how any file is treated, in `.template.toml`:
-
-```toml
-[overrides]
-".gitignore" = "merge"     # keep my own ignores, and merge the template's changes in
-"Makefile" = "ignore"      # forked for good; stop tracking it
-```
-
-Keys are paths as the template names them; values are `managed`, `merge`, `seed`, or
-`ignore`.
-
-## Values, features and submodules
-
-- **`[values]`** holds what replaced the template's placeholders when the project was
-  created: its name, and the copyright holder in `LICENSE`. Every sync applies them to
-  the template's text before comparing, so template changes arrive already renamed.
-  Change a value only together with renaming it throughout the project.
-- **`[features]`** records which of the template's optional features the project kept.
-  A declined feature's files are not tracked.
-- **Submodules** are compared, never changed: `check` reports a vendored library pinned
-  at a different commit from the template's, and bumping it stays a deliberate commit —
-  see [Third-party libraries](development.md#third-party-libraries).
-
-<!-- <template-only> -->
+When a project's copy of a file needs to part ways with the template, change how that file
+is synced under `[overrides]` in `.template.toml`: `merge` to keep local edits to a file
+the template owns, or `ignore` to stop syncing it altogether. The file has examples.
 
 ## Maintaining the template
 
-This section is about changing the template itself, and is left out of projects.
+A change to the template reaches every project at its next sync, so deciding how a file
+is shared is part of adding it. `template.toml` gives each tracked file a strategy or keeps
+it out of projects, and `make template-validate` fails on any file it doesn't cover.
 
-### Every tracked file needs a rule
+The template is a working project too, and some of it is for the template alone: its
+README and this site, the sync tool, the `template-*` make targets. Excluded files,
+template-only sections marked in comments, and the generic stand-ins under `child/` keep
+all of that out of projects. The rules for each — markers, tokens, `child/`, and when to
+bump the manifest format — are in the template-maintenance section of `AGENTS.md`.
 
-`template.toml` classifies each tracked file as `managed`, `merge`, `seed`, or `exclude`
-(kept in the template, never shipped). `make template-validate` fails on a file that
-matches no rule, or more than one, so adding a file forces the decision. A new page in
-`docs/` also needs an entry in `nav` in `mkdocs.yml`.
-
-### Template-only content
-
-Anything that must not reach projects — the `template-*` Makefile targets, the CI job
-that validates the manifest, this section — goes between marker lines. `new` and
-`update` remove the markers and everything between them:
-
-```text
-# <template-only>                   ← opens a block (Makefile, YAML, TOML)
-<!-- <template-only> -->            ← the same, in Markdown
-# <template-only feature="name">    ← removed only from projects that decline the feature
-# </template-only>                  ← closes a block
-```
-
-A marker must be alone on its line apart from the file's comment syntax, and blocks
-can't nest. (The lines above aren't markers, because of the notes after them.)
-
-### Tokens
-
-`[tokens]` maps literal text in the template to a project's values: `scad-repo-template`
-becomes the project's name and `<COPYRIGHT HOLDER>` its copyright holder, in file
-contents and file names. Don't reword either, and don't write them anywhere that ships
-unless they should be replaced there too.
-
-### Testing a change
+To see what a change does to projects, create a throwaway project before making it, then
+check that project as you go:
 
 ```bash
+make template-new CHILD=../scratch ARGS=-y    # before the change
+make template-check CHILD=../scratch          # what projects would receive
 make template-validate                        # every file classified, markers balanced
-make template-test                            # the sync tool's unit tests
-make template-new CHILD=../scratch ARGS=-y    # a throwaway project to try changes on
-make template-check CHILD=../scratch          # what that project would receive
+make template-test                            # the sync tool's tests
 ```
 
-CI runs the first two on every push.
-
-<!-- </template-only> -->
+CI runs the last two on every push.

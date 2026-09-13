@@ -11,7 +11,7 @@ Conventions for coding agents working in this repo. Humans should read these too
 | `vendor/` | Never edited. Pinned via submodule commit. Referenced by relative path, never `OPENSCADPATH`. |
 | `presets/` | Customizer JSON. Selected at build time with `-p presets/x.json -P setname`. |
 | `tests/` | Files that `assert()` on function outputs. |
-| `docs/` | Documentation, built with MkDocs and published to GitHub Pages. Page order is `nav` in `mkdocs.yml`. |
+| `docs/` | Documentation, and the images it uses. |
 | `out/` | Build products only. Gitignored. Attach to GitHub releases instead. |
 
 ## Rules
@@ -27,13 +27,17 @@ Conventions for coding agents working in this repo. Humans should read these too
 - One top-level call at the bottom of a part file, wrapped in a module, so the file can
   also be `use`d by `src/assembly.scad`.
 - Run `make test` and `make stl` before proposing changes; do not commit anything under `out/`.
-- Keep `docs/` in step with the code: a change to documented behaviour updates the page in the
-  same commit. Run `make docs` after touching `docs/` or `mkdocs.yml`; it fails on warnings,
-  such as a broken link or a page missing from `nav`.
+- Keep the documentation in step with the code: a change to documented behaviour updates it in
+  the same commit.
 - The build prefers `openscad-nightly` and falls back to stable `openscad`. Do not
   hardcode either binary — use `$(OPENSCAD)` in the Makefile and `make toolchain` to
   check what resolved. Changes must keep working on both; CI builds both.
 - Do not edit `vendor/`.
+<!-- <template-only feature="docs"> -->
+- The documentation site is built with MkDocs from `docs/`, in the page order of `nav` in
+  `mkdocs.yml`. Run `make docs` after touching either; it fails on warnings, such as a
+  broken link or a page missing from `nav`.
+<!-- </template-only> -->
 
 ## Commits
 
@@ -83,11 +87,24 @@ This whole section is stripped from children.
   this section — goes between marker lines written in the file's comment syntax,
   `# <template-only>` … `# </template-only>` (or `<!-- … -->` in Markdown). A marker
   must be the only thing on its line; blocks must be balanced and cannot nest.
+- Content only for children that take an optional feature goes in a block tagged
+  `feature="docs"`; content only for those that decline it, in one tagged `feature="!docs"`.
+  The template keeps both, so use negated blocks only in files the template doesn't use
+  itself, such as those under `child/`.
 - `scad-repo-template` and `<COPYRIGHT HOLDER>` are tokens (`[tokens]` in
   `template.toml`), replaced by each child's values in contents and paths. Do not
   reword them, and do not introduce the project name in other spellings.
 - Template-specific knowledge belongs in `template.toml`, never in the script.
-- A new page in `docs/` needs both a rule in `template.toml` and an entry in `nav` in
-  `mkdocs.yml`. `docs/template-sync.md` documents `scripts/template_sync.py`; change them
-  together.
+- `manifest_format` in `template.toml` is the version of the format it and the markers are
+  written in. A change an older sync tool couldn't read — a new key, a new kind of marker —
+  bumps it together with `MANIFEST_FORMAT` in the script: record there what the format
+  adds, and make `validate` reject that in a manifest declaring an older format. The tool
+  must keep reading every older format, because it parses the manifest at each child's pin.
+- `README.md` and `docs/*.md` document the template and never ship. Children get the
+  generic versions in `child/` instead — `child/README.md`, and `child/docs/` if they take
+  the `docs` feature — which `[paths]` in `template.toml` moves to the child's root. When
+  a change alters what children receive, update those too.
+- A page for the template's own site goes in `docs/` and in the template-only part of
+  `nav` in `mkdocs.yml`; a page for children goes in `child/docs/` and in `nav` above that
+  part. `docs/template-sync.md` documents `scripts/template_sync.py`; change them together.
 <!-- </template-only> -->

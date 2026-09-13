@@ -1,5 +1,7 @@
 site_name: scad-repo-template
+# <template-only>
 site_description: Baseline shape and setup for OpenSCAD projects.
+# </template-only>
 
 # Once the repository is on GitHub, uncomment these and replace <GITHUB USER>
 # with the account or organisation that owns it. site_url makes canonical links
@@ -30,8 +32,10 @@ nav:
   - Home: index.md
   - Getting started: getting-started.md
   - Development: development.md
+  # <template-only>
   - Parts: parts.md
   - Syncing with the template: template-sync.md
+  # </template-only>
 
 # A build input, not a page.
 exclude_docs: |

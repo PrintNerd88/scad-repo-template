@@ -23,6 +23,7 @@ import tempfile
 import tomllib
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import template_sync as ts  # noqa: E402
@@ -78,16 +79,19 @@ def run(*argv: object) -> tuple[int, str, str]:
 
 
 MANIFEST = """\
-manifest_format = 1
-exclude = ["template.toml", "tool/**"]
+manifest_format = 2
+exclude = ["template.toml", "tool/**", "GUIDE.md"]
 
 [tokens]
 "demo-template" = "project"
 "<HOLDER>" = "holder"
 
+[paths]
+"child/" = ""
+
 [base]
 managed = [".gitignore", ".gitmodules", "ci.yml"]
-merge = ["Makefile", "NOTES.md"]
+merge = ["Makefile", "child/GUIDE.md", "NOTES.md"]
 seed = ["README.md", "LICENSE", "src/*.scad", "demo-template.code-workspace", "logo.png"]
 
 [features.docs]
@@ -99,6 +103,14 @@ seed = ["docs/index.md"]
 requires = ["docs"]
 merge = ["docs/extra.md"]
 """
+
+# The same template in format 1, before [paths]: without child/GUIDE.md, the only
+# file that needs the mapping or a negated marker.
+MANIFEST_V1 = (
+    MANIFEST.replace("manifest_format = 2", "manifest_format = 1")
+    .replace('[paths]\n"child/" = ""\n\n', "")
+    .replace('"child/GUIDE.md", ', "")
+)
 
 FILES = {
     ".gitignore": "out/\n",
@@ -113,6 +125,13 @@ FILES = {
     "docs/index.md": "# docs\n",
     "docs/extra.md": "extra\n",
     "tool/sync.py": "print('not shipped')\n",
+    # The template's own guide stays here; children get child/GUIDE.md in its place.
+    "GUIDE.md": "# the template's guide\n",
+    "child/GUIDE.md": (
+        "# guide\n"
+        '<!-- <template-only feature="docs"> -->\nsee docs\n<!-- </template-only> -->\n'
+        '<!-- <template-only feature="!docs"> -->\nall here\n<!-- </template-only> -->\n'
+    ),
 }
 LOGO = b"\x89PNG\0\0binary"
 
@@ -180,6 +199,7 @@ class UnitTests(unittest.TestCase):
         ):
             self.assertEqual(ts.marker_on(line), ("open", None), line)
         self.assertEqual(ts.marker_on('# <template-only feature="docs">'), ("open", "docs"))
+        self.assertEqual(ts.marker_on('# <template-only feature="!docs">'), ("open", "!docs"))
         self.assertEqual(ts.marker_on("<!-- </template-only> -->"), ("close", None))
         for line in (
             "See `<template-only>` for markers",
@@ -187,6 +207,8 @@ class UnitTests(unittest.TestCase):
             "`# <template-only>`",
             "# <template-only> extra",
             "# <template-only feature=docs>",
+            '# <template-only feature="!!docs">',
+            '# <template-only feature="! docs">',
         ):
             self.assertIsNone(ts.marker_on(line), line)
 
@@ -204,6 +226,11 @@ class UnitTests(unittest.TestCase):
         self.assertEqual(ts.apply_markers("a\n# <template-only>\nb\n# </template-only>\n\nc\n", frozenset(), where="t")[0], "a\n\nc\n")
         kept = 'a\n\n# <template-only feature="x">\nb\n# </template-only>\n\nc\n'
         self.assertEqual(ts.apply_markers(kept, frozenset({"x"}), where="t")[0], "a\n\nb\n\nc\n")
+        # A negated block is kept exactly when the feature is declined.
+        negated = 'a\n# <template-only feature="!x">\nb\n# </template-only>\nc\n'
+        self.assertEqual(ts.apply_markers(negated, frozenset(), where="t")[0], "a\nb\nc\n")
+        self.assertEqual(ts.apply_markers(negated, frozenset({"x"}), where="t")[0], "a\nc\n")
+        self.assertEqual(ts.apply_markers(negated, None, where="t"), (negated, {"!x"}))
         for bad in (
             "# <template-only>\nx\n",
             "x\n# </template-only>\n",
@@ -306,9 +333,28 @@ class ManifestTests(unittest.TestCase):
         self.assert_rejected("never closed")
 
     def test_undeclared_feature_marker(self) -> None:
-        write(self.fx.template, "ci.yml", '# <template-only feature="nope">\nx\n# </template-only>\n')
-        self.fx.template_commit()
-        self.assert_rejected("undeclared feature")
+        for tag in ("nope", "!nope"):
+            with self.subTest(tag=tag):
+                write(self.fx.template, "ci.yml", f'# <template-only feature="{tag}">\nx\n# </template-only>\n')
+                self.fx.template_commit()
+                self.assert_rejected('feature="nope"> names an undeclared feature')
+
+    def test_path_clash(self) -> None:
+        # Ship the template's own GUIDE.md too, and it collides with child/GUIDE.md.
+        self.set_manifest(MANIFEST.replace(', "GUIDE.md"]', "]").replace('"ci.yml"]', '"ci.yml", "GUIDE.md"]'))
+        self.assert_rejected("GUIDE.md: shipped from several template files: GUIDE.md, child/GUIDE.md")
+
+    def test_bad_paths(self) -> None:
+        for entry in ('"child" = ""', '"../child/" = ""', '"./child/" = ""', '"child/" = "/abs/"', '"child/" = 1'):
+            with self.subTest(entry=entry):
+                self.set_manifest(MANIFEST.replace('"child/" = ""', entry))
+                self.assert_rejected("[paths]")
+
+    def test_stale_paths_warns(self) -> None:
+        self.set_manifest(MANIFEST.replace('"child/" = ""', '"child/" = ""\n"nowhere/" = "x/"'))
+        code, out, err = self.validate()
+        self.assertEqual(code, 0, err)
+        self.assertIn("[paths] 'nowhere/' matches no shipped file", out)
 
     def test_requires_unknown(self) -> None:
         self.set_manifest(MANIFEST.replace('requires = ["docs"]', 'requires = ["nope"]'))
@@ -323,8 +369,37 @@ class ManifestTests(unittest.TestCase):
         self.assert_rejected("unknown key")
 
     def test_bad_format(self) -> None:
-        self.set_manifest(MANIFEST.replace("manifest_format = 1", "manifest_format = 2"))
-        self.assert_rejected("manifest_format")
+        for value, message in (
+            ("3", "manifest_format = 3, but this tool reads formats up to 2"),
+            ("0", "positive integer"),
+            ("true", "positive integer"),
+            ('"2"', "positive integer"),
+        ):
+            with self.subTest(value=value):
+                self.set_manifest(MANIFEST.replace("manifest_format = 2", f"manifest_format = {value}"))
+                self.assert_rejected(message)
+
+    def test_newer_format_is_refused_before_its_keys(self) -> None:
+        # A format-3 manifest with a key this tool has never heard of: the number is what's reported.
+        self.set_manifest(MANIFEST.replace("manifest_format = 2", "manifest_format = 3") + "\n[future]\nx = 1\n")
+        code, _out, err = self.validate()
+        self.assertEqual(code, 2, err)
+        self.assertIn("reads formats up to 2", err)
+        self.assertNotIn("unknown key", err)
+
+    def test_format_1_manifest(self) -> None:
+        write(self.fx.template, "template.toml", MANIFEST_V1)
+        sh(self.fx.template, "git", "rm", "-q", "child/GUIDE.md")
+        self.fx.template_commit("format 1")
+        code, _out, err = self.validate()
+        self.assertEqual(code, 0, err)
+        # What format 2 added is refused under format 1.
+        self.set_manifest(MANIFEST_V1 + '\n[paths]\n"child/" = ""\n')
+        self.assert_rejected("[paths] needs manifest_format = 2")
+        self.set_manifest(MANIFEST_V1)
+        write(self.fx.template, "ci.yml", '# <template-only feature="!docs">\nx\n# </template-only>\n')
+        self.fx.template_commit()
+        self.assert_rejected('ci.yml: negated markers (feature="!name") need manifest_format = 2')
 
     def test_stale_pattern_warns(self) -> None:
         self.set_manifest(MANIFEST.replace('"ci.yml"]', '"ci.yml", "nothing.txt"]'))
@@ -373,10 +448,12 @@ class SyncTests(unittest.TestCase):
 
     def test_new_layout(self) -> None:
         for rel in (".gitignore", "ci.yml", "Makefile", "NOTES.md", "README.md", "LICENSE", "src/part.scad",
-                    "widget.code-workspace", "docs.yml", "docs/index.md", "docs/extra.md", "logo.png", ".template.toml"):
+                    "widget.code-workspace", "docs.yml", "docs/index.md", "docs/extra.md", "logo.png", ".template.toml",
+                    "GUIDE.md"):
             self.assertTrue(self.exists(rel), rel)
-        for rel in ("template.toml", "tool/sync.py", "tool", "demo-template.code-workspace"):
+        for rel in ("template.toml", "tool/sync.py", "tool", "demo-template.code-workspace", "child"):
             self.assertFalse(self.exists(rel), rel)
+        self.assertEqual(self.read("GUIDE.md"), "# guide\nsee docs\n")
         self.assertEqual(self.read("ci.yml"), "name: ci\nrun: make\n")
         self.assertEqual(self.read("Makefile"), "all:\n\techo widget\n")
         self.assertEqual(self.read("README.md"), "# widget\n\nSee `<template-only>` for how markers work.\n")
@@ -411,11 +488,24 @@ class SyncTests(unittest.TestCase):
         self.assertIn("feature docs_extra turned off", out)
         for rel in ("docs.yml", "docs/index.md", "docs/extra.md"):
             self.assertFalse((other / rel).exists(), rel)
+        self.assertEqual((other / "GUIDE.md").read_text(), "# guide\nall here\n")
         cfg = tomllib.loads((other / ".template.toml").read_text())
         self.assertEqual(cfg["features"], {"docs": False, "docs_extra": False})
         # Unset values: project defaults to the directory name, anything else to the placeholder.
         self.assertEqual(cfg["values"], {"project": "other", "holder": "<HOLDER>"})
         self.assertEqual((other / "LICENSE").read_text(), "Copyright <HOLDER>\n")
+
+    def test_new_prompts_for_features(self) -> None:
+        other = self.fx.dir / "other"
+        tty = mock.Mock(isatty=lambda: True)
+        # docs: Enter takes the default (on); docs_extra: an unclear answer is asked again.
+        with mock.patch("sys.stdin", tty), mock.patch("builtins.input", side_effect=["", "maybe", "n"]) as ask:
+            code, _out, err = run("--template", self.fx.template, "new", other, "--set", "project=other", "--set", "holder=Jane")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(ask.call_count, 3)
+        self.assertTrue(ask.call_args_list[0].args[0].startswith("docs (docs site) [Y/n]"))
+        cfg = tomllib.loads((other / ".template.toml").read_text())
+        self.assertEqual(cfg["features"], {"docs": True, "docs_extra": False})
 
     def test_new_refuses_dirty_template(self) -> None:
         write(self.fx.template, "ci.yml", "changed\n")
@@ -478,6 +568,41 @@ class SyncTests(unittest.TestCase):
         self.assertEqual(self.statuses(out)["NOTES.md"], "local")
         self.fx.update()
         self.assertEqual(self.read("NOTES.md"), "# Notes\n\nmine\n")
+
+    def test_format_bump_keeps_reading_the_pin(self) -> None:
+        # A child pinned under format 1. The bump to 2 lands with ci.yml's removal, and only
+        # the manifest at the pin knows ci.yml was managed -- so that manifest must stay readable.
+        fx = Fixture()
+        self.addCleanup(fx.cleanup)
+        write(fx.template, "template.toml", MANIFEST_V1)
+        sh(fx.template, "git", "rm", "-q", "child/GUIDE.md")
+        fx.template_commit("format 1")
+        code, _out, err = fx.new()
+        self.assertEqual(code, 0, err)
+        fx.child_commit()
+        write(fx.template, "template.toml", MANIFEST.replace(', "ci.yml"]', "]"))
+        write(fx.template, "child/GUIDE.md", FILES["child/GUIDE.md"])
+        sh(fx.template, "git", "rm", "-q", "ci.yml")
+        fx.template_commit("format 2")
+        code, out, err = fx.check()
+        self.assertEqual(code, 0, err)
+        self.assertNotIn("no readable", out)
+        self.assertEqual(self.statuses(out), {"ci.yml": "delete", "child/GUIDE.md": "new"})
+
+    def test_mapped_path(self) -> None:
+        self.edit_template("GUIDE.md", "# the template's guide, reworded\n")
+        code, out, err = self.fx.check()
+        self.assertEqual(code, 0, err)
+        self.assertEqual(self.statuses(out), {})
+        self.edit_template("child/GUIDE.md", FILES["child/GUIDE.md"].replace("# guide", "# Guide"))
+        code, out, err = self.fx.check()
+        self.assertEqual(code, 0, err)
+        self.assertEqual(self.statuses(out), {"child/GUIDE.md": "update"})
+        self.assertIn("child/GUIDE.md -> GUIDE.md", out)
+        code, _out, err = self.fx.update()
+        self.assertEqual(code, 0, err)
+        self.assertEqual(self.read("GUIDE.md"), "# Guide\nsee docs\n")
+        self.assertFalse(self.exists("child"))
 
     def test_template_only_edits_are_invisible(self) -> None:
         self.edit_template("Makefile", "all:\n\techo demo-template\n# <template-only>\ntemplate-y:\n\techo y\n# </template-only>\n")
@@ -634,6 +759,30 @@ class RealTemplateTests(unittest.TestCase):
     def test_manifest_classifies_every_tracked_file(self) -> None:
         code, _out, err = run("--template", self.ROOT, "validate")
         self.assertEqual(code, 0, err)
+
+    @unittest.skipUnless((ROOT / ts.MANIFEST_NAME).is_file(), "not inside a template checkout")
+    def test_new_with_and_without_docs(self) -> None:
+        tmp = tempfile.TemporaryDirectory(prefix="template_sync_test-")
+        self.addCleanup(tmp.cleanup)
+        pages = {"docs/index.md", "docs/getting-started.md", "docs/development.md"}
+        for docs in ("true", "false"):
+            with self.subTest(docs=docs):
+                child = Path(tmp.name) / f"docs-{docs}"
+                code, _out, err = run(
+                    "--template", self.ROOT, "new", child, "-y", "--force", "--no-submodules", "--feature", f"docs={docs}"
+                )
+                self.assertEqual(code, 0, err)
+                shipped = set(sh(child, "git", "ls-files").split())
+                has_docs = docs == "true"
+                self.assertEqual({p for p in shipped if p.startswith("docs/") and p.endswith(".md")}, pages if has_docs else set())
+                self.assertEqual("mkdocs.yml" in shipped, has_docs)
+                self.assertEqual("docs/index.md" in (child / "README.md").read_text(), has_docs)
+                self.assertFalse([p for p in shipped if p.startswith("child/")])
+                for rel in sorted(shipped):
+                    data = (child / rel).read_bytes()
+                    if not ts.is_binary(data):
+                        for n, line in enumerate(data.decode("utf-8").split("\n"), 1):
+                            self.assertIsNone(ts.marker_on(line), f"leftover marker at {rel}:{n}")
 
 
 if __name__ == "__main__":

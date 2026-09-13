@@ -10,13 +10,17 @@
 # Every tracked file must fall under exactly one rule -- `make template-validate`
 # enforces it, so adding a file forces a decision here.
 
-manifest_format = 1
+# The version of the format this file, and the markers in the template's files,
+# are written in; see MANIFEST_FORMAT in scripts/template_sync.py.
+manifest_format = 2
 
 # Tracked here, never shipped. (A bare key like this must precede every [table].)
 exclude = [
   "template.toml",
   "scripts/template_sync.py",
   "scripts/template_sync_test.py",
+  "README.md",                # the template's own README and documentation site;
+  "docs/*.md",                # children get the generic ones in child/ instead
 ]
 
 # Literal in this repo -> key in a child's .template.toml [values]. Substituted in
@@ -27,29 +31,27 @@ exclude = [
 "scad-repo-template" = "project"
 "<COPYRIGHT HOLDER>" = "copyright_holder"
 
+# Template directory -> the directory its files land in, in a child. child/ holds
+# what children get in place of the template's own files: child/README.md becomes
+# a child's README.md, child/docs/index.md its docs/index.md.
+[paths]
+"child/" = ""
+
 [base]
 managed = [
-  ".github/workflows/docs.yml",
   ".github/workflows/render.yml",
   ".gitignore",
   ".gitmodules",
   ".pre-commit-config.yaml",
-  "docs/requirements.txt",
-  "docs/template-sync.md",    # documents the sync tool, which the template owns
 ]
 merge = [
   "AGENTS.md",                # projects add their own rules
   "Makefile",                 # projects add their own targets, e.g. for variants
-  "mkdocs.yml",               # projects add pages to nav
-  "docs/index.md",            # projects rewrite the overview; shape and tools track the template
-  "docs/getting-started.md",
-  "docs/development.md",
 ]
 seed = [
-  "README.md",
   "LICENSE",
-  "docs/parts.md",            # each project documents its own parts
-  "docs/preview.png",
+  "child/README.md",          # generic, for each project to rewrite
+  "docs/preview.png",         # the README's image, so shipped with or without docs
   "lib/common.scad",
   "presets/example.json",
   "scad-repo-template.code-workspace",
@@ -58,8 +60,23 @@ seed = [
   "tests/common.scad",
 ]
 
-# Optional features go in [features.<name>] tables with the same managed/merge/
-# seed lists, plus `description`, `default` (true) and `requires = [...]`. A
-# child declines one in its .template.toml [features]; its files are then not
-# tracked, and <template-only feature="<name>"> blocks are stripped for it.
-# This template declares none yet.
+# Optional features: [features.<name>] tables with the same managed/merge/seed
+# lists, plus `description`, `default` (true) and `requires = [...]`. `new` asks
+# about each; a child records its choices in its .template.toml [features]. A
+# declined feature's files are not tracked and its <template-only feature="name">
+# blocks are stripped; <template-only feature="!name"> blocks are stripped from
+# children that take it instead.
+
+[features.docs]
+description = "an MkDocs site, published to GitHub Pages; otherwise the README is the documentation"
+default = false
+managed = [
+  ".github/workflows/docs.yml",
+  "docs/requirements.txt",
+]
+merge = [
+  "mkdocs.yml",               # projects add pages to nav
+]
+seed = [
+  "child/docs/*.md",          # generic Home, Getting started and Development pages
+]

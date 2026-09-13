@@ -1,6 +1,8 @@
 # Build products
 out/
+# <template-only feature="docs">
 site/
+# </template-only>
 *.stl
 *.3mf
 *.obj

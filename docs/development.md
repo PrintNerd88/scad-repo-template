@@ -106,6 +106,10 @@ steps:
 2. In `mkdocs.yml`, uncomment `site_url` and `repo_url` and replace `<GITHUB USER>` with
    the account or organisation that owns the repository.
 
+A project gets a site like this one only if it takes the `docs` option when it is
+created (see [Create a new project](getting-started.md#create-a-new-project)), and it
+starts from generic pages rather than these.
+
 ## Releases
 
 `out/` is gitignored. Attach STLs to a GitHub release from a tag-triggered job instead of

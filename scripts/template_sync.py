@@ -31,11 +31,16 @@ manifest). A child may override any file's strategy in ``[overrides]``,
 including ``ignore``.
 
 Template text is normalised before it is compared with, copied to, or merged
-into a child: ``<template-only>`` blocks are stripped (always, or -- when
-tagged ``feature="x"`` -- only when the child declined that feature), and each
-``[tokens]`` literal is replaced by the child's value, in contents and paths.
-A marker is a line holding nothing but the tag and the file's comment syntax,
-e.g. ``# <template-only>`` or ``<!-- </template-only> -->``.
+into a child: ``<template-only>`` blocks are stripped (always; or, when tagged
+``feature="x"``, only when the child declined feature x, and when tagged
+``feature="!x"``, only when it took it), and each ``[tokens]`` literal is
+replaced by the child's value, in contents and paths. A marker is a line
+holding nothing but the tag and the file's comment syntax, e.g.
+``# <template-only>`` or ``<!-- </template-only> -->``.
+
+A file can land at a different path in a child than it has in the template:
+``[paths]`` maps a template directory prefix to a child one, so the template
+can keep, say, its own README while its children get a different one.
 
 Exit codes: 0 clean / applied; 1 drift, conflicts, or (``check --strict``)
 pending updates; 2 configuration or usage error.
@@ -57,7 +62,14 @@ from pathlib import Path
 
 MANIFEST_NAME = "template.toml"
 CHILD_CONFIG_NAME = ".template.toml"
-MANIFEST_FORMAT = 1
+# manifest_format history. A manifest declares the format of everything it uses,
+# so a tool too old for it stops at the number instead of misreading it. Every
+# older format stays readable: `check` and `update` parse the manifest as it was
+# at a child's pin, which may predate a bump. A new format's additions must be
+# rejected in a manifest that declares an older one.
+#   1  exclude, [tokens], [base], [features], <template-only> markers
+#   2  [paths]; negated feature markers, <template-only feature="!name">
+MANIFEST_FORMAT = 2
 STRATEGIES = ("managed", "merge", "seed")
 RULE_KINDS = STRATEGIES + ("exclude",)
 CHILD_STRATEGIES = STRATEGIES + ("ignore",)
@@ -188,7 +200,7 @@ def submodule_entries(root: Path) -> list[tuple[str, str, str]]:
 # Normalisation: <template-only> markers and tokens
 # ---------------------------------------------------------------------------
 
-_MARKER_OPEN_RE = re.compile(r'^<template-only(?:\s+feature="([A-Za-z_][A-Za-z0-9_]*)")?>$')
+_MARKER_OPEN_RE = re.compile(r'^<template-only(?:\s+feature="(!?[A-Za-z_][A-Za-z0-9_]*)")?>$')
 _MARKER_CLOSE = "</template-only>"
 _COMMENT_LEAD_RE = re.compile(r"^(?:#+|//+|<!--|/\*+|\*+|;+|--)\s*")
 _COMMENT_TAIL_RE = re.compile(r"\s*(?:-->|\*/)$")
@@ -197,8 +209,9 @@ _COMMENT_TAIL_RE = re.compile(r"\s*(?:-->|\*/)$")
 def marker_on(line: str) -> tuple[str, str | None] | None:
     """Return ``("open", feature)`` or ``("close", None)`` if the whole line is a marker.
 
-    The line may carry the file's comment syntax and nothing else, so prose
-    that merely mentions a marker (in backticks, mid-sentence) never counts.
+    ``feature`` is the tag's feature name, ``!``-prefixed when negated, or
+    ``None``. The line may carry the file's comment syntax and nothing else, so
+    prose that merely mentions a marker (in backticks, mid-sentence) never counts.
     """
     core = _COMMENT_LEAD_RE.sub("", line.strip(), count=1)
     core = _COMMENT_TAIL_RE.sub("", core, count=1).strip()
@@ -208,13 +221,23 @@ def marker_on(line: str) -> tuple[str, str | None] | None:
     return ("open", m.group(1)) if m else None
 
 
+def block_kept(feature: str | None, enabled: frozenset[str]) -> bool:
+    """Whether a child with ``enabled`` features keeps a block tagged ``feature``."""
+    if feature is None:
+        return False
+    if feature.startswith("!"):
+        return feature[1:] not in enabled
+    return feature in enabled
+
+
 def apply_markers(text: str, enabled: frozenset[str] | None, *, where: str) -> tuple[str, set[str]]:
     """Strip marker lines and the template-only blocks that don't apply to a child.
 
     An untagged block is always dropped; a ``feature="x"`` block is dropped
-    unless ``x`` is in ``enabled``. ``enabled=None`` is validation mode: the
-    text is returned unchanged, but balance is still checked and the set of
-    referenced feature names is returned.
+    unless ``x`` is in ``enabled``, and a ``feature="!x"`` block if it is.
+    ``enabled=None`` is validation mode: the text is returned unchanged, but
+    balance is still checked and the set of feature tags used (``x`` or ``!x``)
+    is returned.
     """
     out: list[str] = []
     seen: set[str] = set()
@@ -225,7 +248,7 @@ def apply_markers(text: str, enabled: frozenset[str] | None, *, where: str) -> t
         marker = marker_on(line)
         if marker is None:
             in_block = open_at is not None
-            keep_block = enabled is None or (open_feature is not None and open_feature in enabled)
+            keep_block = enabled is None or block_kept(open_feature, enabled)
             if not in_block or keep_block:
                 if not (swallow_blank and line == ""):
                     out.append(line)
@@ -241,7 +264,7 @@ def apply_markers(text: str, enabled: frozenset[str] | None, *, where: str) -> t
         else:
             if open_at is None:
                 raise ConfigError(f"{where}:{n}: </template-only> with no open block")
-            dropped = enabled is not None and not (open_feature is not None and open_feature in enabled)
+            dropped = enabled is not None and not block_kept(open_feature, enabled)
             swallow_blank = dropped and (not out or out[-1] == "")
             open_at = open_feature = None
         if enabled is None:
@@ -288,7 +311,24 @@ def normalise(
 
 
 def map_path(path: str, manifest: Manifest, values: dict[str, str]) -> str:
+    """Template path -> child path: the longest matching ``[paths]`` prefix, then tokens."""
+    for prefix, target in manifest.paths.items():
+        if path.startswith(prefix):
+            path = target + path[len(prefix):]
+            break
     return substitute(path, manifest.tokens, values)
+
+
+def path_clashes(pairs: Iterable[tuple[str, str]]) -> list[str]:
+    """One message per child path that several (template path, child path) pairs land on."""
+    sources: dict[str, list[str]] = {}
+    for path, child_path in pairs:
+        sources.setdefault(child_path, []).append(path)
+    return [
+        f"{child_path}: shipped from several template files: {', '.join(paths)}"
+        for child_path, paths in sources.items()
+        if len(paths) > 1
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -347,13 +387,22 @@ class Rule:
 @dataclass(frozen=True)
 class Manifest:
     root: Path
+    format: int  # manifest_format
     tokens: dict[str, str]  # literal -> value key
+    paths: dict[str, str]  # template directory prefix -> child directory prefix, longest first
     features: dict[str, Feature]
     rules: tuple[Rule, ...]
 
     @property
     def value_keys(self) -> list[str]:
         return sorted(set(self.tokens.values()))
+
+    def placeholder_values(self) -> dict[str, str]:
+        """Each value key -> the first template literal naming it: substitution that changes nothing."""
+        values: dict[str, str] = {}
+        for literal, key in self.tokens.items():
+            values.setdefault(key, literal)
+        return values
 
 
 def _table(raw: object, where: str) -> dict:
@@ -374,6 +423,14 @@ def _reject_unknown(raw: dict, allowed: Iterable[str], where: str) -> None:
         raise ConfigError(f"{where}: unknown key(s) {', '.join(unknown)}; allowed: {', '.join(allowed)}")
 
 
+_DIR_PREFIX_RE = re.compile(r"^(?:[^/]+/)+$")
+
+
+def _is_dir_prefix(s: str) -> bool:
+    """A relative directory path ending in ``/``, with no ``.`` or ``..`` segments."""
+    return bool(_DIR_PREFIX_RE.match(s)) and not {".", ".."} & set(s.split("/"))
+
+
 def load_manifest(root: Path) -> Manifest:
     path = root / MANIFEST_NAME
     if not path.is_file():
@@ -387,17 +444,34 @@ def parse_manifest(text: str, root: Path, *, where: str) -> Manifest:
     except tomllib.TOMLDecodeError as e:
         raise ConfigError(f"{where}: {e}") from None
     w = where
-    _reject_unknown(raw, ("manifest_format", "tokens", "exclude", "base", "features"), w)
-    if raw.get("manifest_format") != MANIFEST_FORMAT:
+    # The format before anything else: a newer manifest may have keys this tool doesn't know.
+    fmt = raw.get("manifest_format")
+    if type(fmt) is not int or fmt < 1:
+        raise ConfigError(f"{w}: manifest_format must be a positive integer, not {fmt!r}")
+    if fmt > MANIFEST_FORMAT:
         raise ConfigError(
-            f"{w}: manifest_format = {raw.get('manifest_format')!r}; this tool understands {MANIFEST_FORMAT}"
+            f"{w}: manifest_format = {fmt}, but this tool reads formats up to {MANIFEST_FORMAT}; "
+            "use the sync tool from the same template checkout"
         )
+    _reject_unknown(raw, ("manifest_format", "tokens", "paths", "exclude", "base", "features"), w)
+    if "paths" in raw and fmt < 2:
+        raise ConfigError(f"{w}: [paths] needs manifest_format = 2")
 
     tokens: dict[str, str] = {}
     for literal, key in _table(raw.get("tokens", {}), f"{w}: [tokens]").items():
         if not literal or not isinstance(key, str) or not _IDENT_RE.match(key):
             raise ConfigError(f"{w}: [tokens] {literal!r}: value must be an identifier naming a child [values] key")
         tokens[literal] = key
+
+    paths: dict[str, str] = {}
+    for prefix, target in _table(raw.get("paths", {}), f"{w}: [paths]").items():
+        if not _is_dir_prefix(prefix) or not isinstance(target, str) or not (target == "" or _is_dir_prefix(target)):
+            raise ConfigError(
+                f'{w}: [paths] {prefix!r}: keys must be relative directories ending in "/", '
+                f'and values the same or "" for the child\'s root'
+            )
+        paths[prefix] = target
+    paths = dict(sorted(paths.items(), key=lambda kv: len(kv[0]), reverse=True))
 
     rules: list[Rule] = []
     for pat in _str_list(raw.get("exclude", []), f"{w}: exclude"):
@@ -430,7 +504,7 @@ def parse_manifest(text: str, root: Path, *, where: str) -> Manifest:
             if req not in features:
                 raise ConfigError(f"{w}: [features.{f.name}] requires unknown feature {req!r}")
     _check_no_cycles(features, w)
-    return Manifest(root, tokens, features, tuple(rules))
+    return Manifest(root, fmt, tokens, paths, features, tuple(rules))
 
 
 def _check_no_cycles(features: dict[str, Feature], where: str) -> None:
@@ -598,7 +672,9 @@ def render_child_config(
         "[features]",
     ]
     if manifest.features:
-        lines.append("# Optional template features; a declined feature's files are not tracked.")
+        lines.append("# Optional template features, chosen when the project was created; a declined")
+        lines.append("# feature's files are not tracked. Switching one later is largely manual: see the")
+        lines.append("# template's documentation on syncing.")
         for name, f in manifest.features.items():
             if f.description:
                 lines.append(f"# {f.description}")
@@ -785,6 +861,9 @@ def child_file_set(
         child_path = map_path(path, manifest, cfg.values)
         strategy = cfg.overrides.get(path, cfg.overrides.get(child_path, cl.kind))
         result.append((path, child_path, strategy))
+    clashes = path_clashes((path, child_path) for path, child_path, _strategy in result)
+    if clashes:
+        raise ConfigError("\n".join(clashes))
     return result
 
 
@@ -953,12 +1032,21 @@ def cmd_validate(args: argparse.Namespace, root: Path) -> int:
             continue
         shipped_text.append(text + "\n" + path)
         try:
-            _, feats = apply_markers(text, None, where=path)
+            _, tags = apply_markers(text, None, where=path)
         except ConfigError as e:
             errors.append(str(e))
             continue
-        for f in sorted(feats - set(manifest.features)):
+        for f in sorted({t.lstrip("!") for t in tags} - set(manifest.features)):
             errors.append(f'{path}: <template-only feature="{f}"> names an undeclared feature')
+        if manifest.format < 2 and any(t.startswith("!") for t in tags):
+            errors.append(f'{path}: negated markers (feature="!name") need manifest_format = 2')
+
+    shipped = [path for path, cl in classified.items() if cl.kind != "exclude"]
+    placeholders = manifest.placeholder_values()
+    errors += path_clashes((path, map_path(path, manifest, placeholders)) for path in shipped)
+    for prefix in manifest.paths:
+        if not any(path.startswith(prefix) for path in shipped):
+            warnings.append(f"[paths] {prefix!r} matches no shipped file")
 
     for literal in manifest.tokens:
         if not any(literal in t for t in shipped_text):
@@ -1050,9 +1138,7 @@ def resolve_values(manifest: Manifest, given: dict[str, str], target: Path, *, y
     key it is the template's own literal, so an unset placeholder stays a
     visible placeholder rather than being guessed.
     """
-    defaults: dict[str, str] = {}
-    for literal, key in manifest.tokens.items():
-        defaults.setdefault(key, literal)
+    defaults = manifest.placeholder_values()
     if "project" in defaults:
         defaults["project"] = target.name
     interactive = not yes and sys.stdin.isatty()
@@ -1065,6 +1151,24 @@ def resolve_values(manifest: Manifest, given: dict[str, str], target: Path, *, y
         else:
             values[key] = defaults[key]
     return values
+
+
+def resolve_features(manifest: Manifest, given: dict[str, bool], *, yes: bool) -> dict[str, bool]:
+    """Feature choices for a new child: --feature, else prompt, else (by omission) the default."""
+    chosen = dict(given)
+    if yes or not sys.stdin.isatty():
+        return chosen
+    answers = {"y": True, "yes": True, "n": False, "no": False}
+    for name, f in manifest.features.items():
+        if name in chosen:
+            continue
+        prompt = f"{name}{f' ({f.description})' if f.description else ''} [{'Y/n' if f.default else 'y/N'}]: "
+        answer = None
+        while answer is None:
+            reply = input(prompt).strip().lower()
+            answer = f.default if not reply else answers.get(reply)
+        chosen[name] = answer
+    return chosen
 
 
 def cmd_new(args: argparse.Namespace, root: Path) -> int:
@@ -1083,22 +1187,28 @@ def cmd_new(args: argparse.Namespace, root: Path) -> int:
         if v.lower() not in ("true", "false"):
             raise ConfigError(f"--feature {k}={v}: expected true or false")
         chosen[k] = v.lower() == "true"
-    enabled, notes = effective_features(manifest, chosen)
+    enabled, notes = effective_features(manifest, resolve_features(manifest, chosen, yes=args.yes))
 
     tracked = tracked_files(root)
     classified = classify(manifest, [t.path for t in tracked if not t.gitlink])
     gitlinks = [t.path for t in tracked if t.gitlink]
     add_submodules = bool(gitlinks) and not args.no_submodules
+    shipped = [
+        (path, map_path(path, manifest, values), cl)
+        for path, cl in sorted(classified.items())
+        if cl.kind != "exclude" and not (cl.feature and cl.feature not in enabled)
+    ]
+    clashes = path_clashes((path, child_path) for path, child_path, _cl in shipped)
+    if clashes:
+        raise ConfigError("\n".join(clashes))
 
     target.mkdir(parents=True, exist_ok=True)
     written: list[str] = []
-    for path, cl in sorted(classified.items()):
-        if cl.kind == "exclude" or (cl.feature and cl.feature not in enabled):
-            continue
+    for path, child_path, cl in shipped:
         if path == ".gitmodules" and add_submodules:
             continue  # written after `git submodule add`, which rewrites it
         src = root / path
-        r = FileResult(path, map_path(path, manifest, values), cl.kind)
+        r = FileResult(path, child_path, cl.kind)
         r.content = normalise(src.read_bytes(), manifest, values, enabled, where=path)
         r.executable = bool(src.stat().st_mode & stat.S_IXUSR)
         write_result(target, r)
@@ -1193,8 +1303,14 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="KEY=VALUE",
         help="token value (repeatable); unset keys default to the directory name for `project`, else the template's literal",
     )
-    p.add_argument("--feature", action="append", default=[], metavar="NAME=true|false", help="feature choice (repeatable)")
-    p.add_argument("-y", "--yes", action="store_true", help="never prompt; use defaults for unset values")
+    p.add_argument(
+        "--feature",
+        action="append",
+        default=[],
+        metavar="NAME=true|false",
+        help="feature choice (repeatable); unset features are asked about, or take the template's default",
+    )
+    p.add_argument("-y", "--yes", action="store_true", help="never prompt; use defaults for unset values and features")
     p.add_argument("--no-submodules", action="store_true", help="skip `git submodule add` (no network)")
     p.add_argument("--force", action="store_true", help="proceed despite uncommitted changes in the template")
     p.set_defaults(func=cmd_new)
