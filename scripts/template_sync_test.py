@@ -1,6 +1,10 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = []
+# ///
 """Tests for template_sync.py.
 
-    python3 -m unittest scripts/template_sync_test.py      (or: make template-test)
+    make template-test      # uv run scripts/template_sync_test.py
 
 Builds throwaway template and child git repositories under a temp directory.
 Git identity and config are pinned inside this process so the user's own

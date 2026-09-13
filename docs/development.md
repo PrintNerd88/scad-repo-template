@@ -1,0 +1,112 @@
+# Development
+
+Everything runs through `make` from the repository root; `make help` lists the targets.
+The conventions each directory follows are in `AGENTS.md`, also at the repository root.
+
+## Build
+
+| Command | Result |
+|---|---|
+| `make` / `make stl` | Renders every `src/*.scad` to `out/*.stl` |
+| `make png` | Renders previews to `out/*.png` (needs a display; see below) |
+| `make test` | Runs `tests/*.scad` |
+| `make docs` | Builds the documentation into `site/`, failing on any warning |
+| `make docs-serve` | Serves the documentation at <http://127.0.0.1:8000>, rebuilding on every save |
+| `make clean` | Removes `out/` and `site/` |
+| `make toolchain` | Prints the resolved OpenSCAD binary, version, and backend |
+| `make help` | Lists the targets |
+
+`clean`, `help`, `toolchain` and the docs targets work with no OpenSCAD installed; the
+render targets fail straight away with an actionable message instead of a confusing
+render error.
+
+PNG export needs a display on most OpenSCAD builds. Without one, run it under Xvfb:
+`xvfb-run make png`.
+
+### Choosing the OpenSCAD binary
+
+An explicit `OPENSCAD=` wins; otherwise the Makefile uses the first of
+`openscad-nightly openscad` found on `PATH`, and passes `--backend=manifold` when that
+binary supports it.
+
+```bash
+make OPENSCAD=openscad                   # force the stable build
+make OPENSCAD=/path/to/openscad          # non-PATH install
+make OPENSCAD_CANDIDATES='foo bar'       # change the auto-detect search order
+make FLAGS='--export-format=binstl'      # force flags (skips the manifold probe)
+```
+
+## Variants
+
+Each part's parameters sit in the Customizer block at the top of its file. Override them
+on the command line, or save named sets into `presets/` from OpenSCAD's
+**Window → Customizer**. Add an explicit Makefile target for each variant you want built,
+rather than generalising the pattern rule:
+
+```bash
+openscad -D 'plate_length=120' -o out/plate-long.stl src/example.scad
+openscad -p presets/example.json -P large-m5 -o out/plate-large.stl src/example.scad
+```
+
+## Tests
+
+`tests/*.scad` assert on the functions in `lib/`. Test functions, not geometry — there is
+no good automated STL diff in the standard toolchain. For geometry regressions, CI
+renders PNGs on every push and uploads them with the STLs; compare them by eye in the
+pull request.
+
+OpenSCAD exits 0 even when an `assert()` fails (verified on both 2021.01 and the 2026.08
+nightly), so `make test` searches the echo output for `ERROR`, `WARNING` and `TRACE`
+instead of trusting the exit code.
+
+## Pre-commit hooks
+
+Run `pre-commit install` once per clone; the hooks then check every commit, and
+`pre-commit run --all-files` checks the whole tree on demand. They fix trailing
+whitespace and missing final newlines, reject files over 500 KB (usually an STL
+committed by accident), check that presets parse as JSON, scan for credentials, and
+evaluate every changed `.scad` file outside `vendor/` with OpenSCAD.
+
+That last check is a full render, which gets slow on large parts;
+`.pre-commit-config.yaml` shows how to narrow it to `lib/` and `tests/`.
+
+## Third-party libraries
+
+Libraries are vendored as git submodules under `vendor/` and referenced by relative path,
+never through `OPENSCADPATH`:
+
+```bash
+git submodule add https://github.com/BelfrySCAD/BOSL2.git vendor/BOSL2
+git commit -m "build: add BOSL2 submodule"
+```
+
+Bump deliberately:
+
+```bash
+git submodule update --remote vendor/BOSL2
+git commit -am "build(vendor): bump BOSL2"
+```
+
+`vendor/` is never edited by hand.
+
+## Documentation
+
+This site is the Markdown in `docs/`, built by MkDocs with the Material theme. Page order
+is the `nav` list in `mkdocs.yml`; add new pages there.
+
+`make docs` builds with `--strict`, so a broken link, a missing heading anchor, or a page
+left out of `nav` fails the build. uv runs the MkDocs and theme versions pinned in
+`docs/requirements.txt`, so nothing is installed into the repository.
+
+The `docs` workflow builds the site on every push and pull request, and publishes it to
+GitHub Pages from `main`. Once the repository is on GitHub, publishing needs two one-time
+steps:
+
+1. In the repository's **Settings → Pages**, set **Source** to **GitHub Actions**.
+2. In `mkdocs.yml`, uncomment `site_url` and `repo_url` and replace `<GITHUB USER>` with
+   the account or organisation that owns the repository.
+
+## Releases
+
+`out/` is gitignored. Attach STLs to a GitHub release from a tag-triggered job instead of
+committing binaries.

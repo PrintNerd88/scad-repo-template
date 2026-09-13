@@ -1,16 +1,21 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = []
+# ///
 """Create projects from this template and keep them in sync with it.
 
 Runs from a template checkout (the directory holding ``template.toml``) and
 acts on a child project given as an argument. Nothing here ships to children:
 a child carries only ``.template.toml`` -- which template it came from, the
 template commit it was last synced to, its token values, feature choices and
-per-file overrides. Python >= 3.11, standard library only; git on PATH.
+per-file overrides. Standard library only, run through uv (the metadata above
+asks it for Python >= 3.11); git on PATH.
 
-    python3 scripts/template_sync.py validate            # template self-check
-    python3 scripts/template_sync.py new    ../child     # create a project
-    python3 scripts/template_sync.py check  ../child     # report drift / updates
-    python3 scripts/template_sync.py update ../child     # apply updates, bump the pin
+    uv run scripts/template_sync.py validate            # template self-check
+    uv run scripts/template_sync.py new    ../child     # create a project
+    uv run scripts/template_sync.py check  ../child     # report drift / updates
+    uv run scripts/template_sync.py update ../child     # apply updates, bump the pin
 
 Every tracked template file is classified in template.toml as one of:
 

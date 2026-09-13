@@ -29,18 +29,26 @@ exclude = [
 
 [base]
 managed = [
+  ".github/workflows/docs.yml",
   ".github/workflows/render.yml",
   ".gitignore",
   ".gitmodules",
   ".pre-commit-config.yaml",
+  "docs/requirements.txt",
+  "docs/template-sync.md",    # documents the sync tool, which the template owns
 ]
 merge = [
-  "AGENTS.md",  # projects add their own rules
-  "Makefile",   # projects add their own targets (README: "add explicit targets")
+  "AGENTS.md",                # projects add their own rules
+  "Makefile",                 # projects add their own targets, e.g. for variants
+  "mkdocs.yml",               # projects add pages to nav
+  "docs/index.md",            # projects rewrite the overview; shape and tools track the template
+  "docs/getting-started.md",
+  "docs/development.md",
 ]
 seed = [
   "README.md",
   "LICENSE",
+  "docs/parts.md",            # each project documents its own parts
   "docs/preview.png",
   "lib/common.scad",
   "presets/example.json",

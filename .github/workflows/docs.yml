@@ -1,0 +1,47 @@
+# Builds the documentation on every push and pull request, so a broken link or
+# any other MkDocs warning fails CI, and publishes it to GitHub Pages from main.
+#
+# One-time setup: in the repository's Settings -> Pages, set Source to
+# "GitHub Actions". Publishing uploads the built site as an artifact for GitHub
+# to serve, so there is no gh-pages branch and nothing is committed.
+name: docs
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: docs/requirements.txt
+
+      # The same entry point as locally: uv runs the pinned MkDocs with --strict.
+      - run: make docs
+
+      - if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site/
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false   # never interrupt a deploy in progress
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

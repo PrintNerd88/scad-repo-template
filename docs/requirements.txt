@@ -1,0 +1,5 @@
+# Documentation toolchain. `make docs` runs MkDocs at these versions through uv,
+# locally and in the docs workflow alike. Pinned so every build produces the
+# same site; bump deliberately and check that `make docs` still passes.
+mkdocs==1.6.1
+mkdocs-material==9.7.7

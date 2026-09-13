@@ -11,6 +11,7 @@ Conventions for coding agents working in this repo. Humans should read these too
 | `vendor/` | Never edited. Pinned via submodule commit. Referenced by relative path, never `OPENSCADPATH`. |
 | `presets/` | Customizer JSON. Selected at build time with `-p presets/x.json -P setname`. |
 | `tests/` | Files that `assert()` on function outputs. |
+| `docs/` | Documentation, built with MkDocs and published to GitHub Pages. Page order is `nav` in `mkdocs.yml`. |
 | `out/` | Build products only. Gitignored. Attach to GitHub releases instead. |
 
 ## Rules
@@ -26,6 +27,9 @@ Conventions for coding agents working in this repo. Humans should read these too
 - One top-level call at the bottom of a part file, wrapped in a module, so the file can
   also be `use`d by `src/assembly.scad`.
 - Run `make test` and `make stl` before proposing changes; do not commit anything under `out/`.
+- Keep `docs/` in step with the code: a change to documented behaviour updates the page in the
+  same commit. Run `make docs` after touching `docs/` or `mkdocs.yml`; it fails on warnings,
+  such as a broken link or a page missing from `nav`.
 - The build prefers `openscad-nightly` and falls back to stable `openscad`. Do not
   hardcode either binary — use `$(OPENSCAD)` in the Makefile and `make toolchain` to
   check what resolved. Changes must keep working on both; CI builds both.
@@ -83,4 +87,7 @@ This whole section is stripped from children.
   `template.toml`), replaced by each child's values in contents and paths. Do not
   reword them, and do not introduce the project name in other spellings.
 - Template-specific knowledge belongs in `template.toml`, never in the script.
+- A new page in `docs/` needs both a rule in `template.toml` and an entry in `nav` in
+  `mkdocs.yml`. `docs/template-sync.md` documents `scripts/template_sync.py`; change them
+  together.
 <!-- </template-only> -->

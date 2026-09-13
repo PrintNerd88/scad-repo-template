@@ -17,7 +17,7 @@ OPENSCAD_AUTO := $(firstword $(foreach c,$(OPENSCAD_CANDIDATES),\
 OPENSCAD ?= $(OPENSCAD_AUTO)
 
 # Goals that never shell out to OpenSCAD, so they must work with none installed.
-NO_SCAD_GOALS := clean help toolchain
+NO_SCAD_GOALS := clean help toolchain docs docs-serve
 # <template-only>
 NO_SCAD_GOALS += template-validate template-test template-check template-update template-new
 # </template-only>
@@ -43,7 +43,7 @@ PNGS     := $(addprefix out/,$(addsuffix .png,$(PARTS)))
 TESTS    := $(wildcard tests/*.scad)
 DEPS     := $(wildcard lib/*.scad)
 
-.PHONY: all stl png test clean help toolchain
+.PHONY: all stl png test clean help toolchain docs docs-serve
 all: stl
 
 stl: $(STLS)
@@ -88,12 +88,28 @@ else
 endif
 	@echo "flags    : $(strip $(FLAGS))"
 
+# ---------------------------------------------------------------------------
+# Documentation
+#
+# uv runs MkDocs and its theme at the versions pinned in docs/requirements.txt,
+# in a cached environment outside the repository.
+# ---------------------------------------------------------------------------
+MKDOCS := uv run --no-project --with-requirements docs/requirements.txt mkdocs
+
+docs:
+	$(MKDOCS) build --strict
+
+docs-serve:
+	$(MKDOCS) serve
+
 help:
 	@echo "make            build STLs into out/ (same as 'make stl')"
 	@echo "make png        render previews into out/"
 	@echo "make test       run tests/*.scad"
+	@echo "make docs       build the documentation into site/"
+	@echo "make docs-serve preview the documentation at http://127.0.0.1:8000"
 	@echo "make toolchain  show which OpenSCAD is in use"
-	@echo "make clean      remove out/"
+	@echo "make clean      remove out/ and site/"
 	@echo
 	@echo "Override the binary with: make OPENSCAD=openscad"
 
@@ -101,7 +117,7 @@ out:
 	mkdir -p out
 
 clean:
-	rm -rf out
+	rm -rf out site
 # <template-only>
 # Template maintenance. Everything between these markers is stripped from
 # children by scripts/template_sync.py, which never ships to them either.
@@ -115,10 +131,10 @@ CHILD ?=
 ARGS  ?=
 .PHONY: template-validate template-test template-new template-check template-update
 template-validate:
-	python3 scripts/template_sync.py validate
+	uv run scripts/template_sync.py validate
 template-test:
-	python3 -B -m unittest scripts/template_sync_test.py
+	PYTHONDONTWRITEBYTECODE=1 uv run scripts/template_sync_test.py
 template-new template-check template-update: template-%:
 	@test -n "$(CHILD)" || { echo "usage: make template-$* CHILD=path/to/child [ARGS='...']"; exit 2; }
-	python3 scripts/template_sync.py $* $(CHILD) $(ARGS)
+	uv run scripts/template_sync.py $* $(CHILD) $(ARGS)
 # </template-only>

@@ -1,0 +1,78 @@
+# scad-repo-template
+
+Baseline shape and setup for OpenSCAD projects. Opinionated where OpenSCAD itself is
+not: the language has no package manager, no project file, and no formal repo
+convention, so this is a self-contained repo that renders headlessly and reproducibly.
+
+It gives a project a fixed layout, a Makefile that renders STLs and previews with
+whichever OpenSCAD is installed, assert-based tests, pre-commit hooks, CI on both the
+nightly and stable toolchains, and a documentation site built with MkDocs for GitHub
+Pages. Projects created from the template can pull in its later changes with a small
+sync tool.
+
+The included part is a demo — a parametric mounting plate, annotated section by
+section with the convention it illustrates. Replace it.
+
+![Rendered preview of the demo mounting plate](preview.png)
+
+## Repository shape
+
+| Path | Holds |
+|---|---|
+| `src/` | Printable parts and assemblies, one `.scad` file per output file. Each keeps its Customizer parameters at the top and a single top-level call at the bottom, so it renders on its own and can also be `use`d by an assembly. |
+| `lib/` | Project-local modules and functions. Definitions only — no top-level geometry, no reliance on globals — so any file can `use <>` them safely. |
+| `vendor/` | Third-party libraries as git submodules, pinned to exact commits and never edited. BOSL2 is included. |
+| `presets/` | Customizer parameter sets (`.json`), for rendering variants of a part. |
+| `tests/` | `.scad` files that `assert()` on the functions in `lib/`, run headlessly by `make test`. |
+| `docs/` | This documentation, and the images the README uses. |
+| `scripts/` | Helper scripts, for whatever the Makefile can't reasonably do. |
+| `out/` | Rendered STLs, PNGs and test logs. Gitignored — attach release files to GitHub releases instead. |
+| `site/` | The built documentation site. Gitignored. |
+| `.github/workflows/` | CI. `render.yml` tests and renders on both OpenSCAD toolchains; `docs.yml` builds this site and publishes it to GitHub Pages. |
+| `Makefile` | Every build, test and documentation command — see [Development](development.md). |
+| `mkdocs.yml` | Documentation site settings and page order. |
+| `.pre-commit-config.yaml` | The checks run before every commit. |
+| `AGENTS.md` | Conventions for coding agents, and for humans: the rule each directory follows, how to import, and the OpenSCAD toolchain gotchas behind them. |
+| `.template.toml` | Only in a project created from the template: the template commit the project was last synced with, and its sync settings — see [Syncing with the template](template-sync.md). |
+
+Alongside these sit `README.md`, `LICENSE`, `.gitignore`, `.gitmodules` (the submodule
+URLs), and a VS Code workspace file.
+
+<!-- <template-only> -->
+
+The template itself has three more files, none of which reach a project:
+`template.toml`, which says how each file is kept in sync, and the sync tool
+`scripts/template_sync.py` with its tests.
+
+<!-- </template-only> -->
+
+A part in `src/` pulls in modules from `lib/` and `vendor/` by relative path, never
+through `OPENSCADPATH`, so every checkout renders the same way — from `make`, in CI, or
+by double-clicking the file.
+
+## Tools
+
+| Tool | What it does here |
+|---|---|
+| [OpenSCAD](https://openscad.org/) | Renders the parts. The Makefile prefers `openscad-nightly`, whose manifold backend is far faster on CSG-heavy parts, and falls back to a stable `openscad`; any version from 2021.01 on works. |
+| [BOSL2](https://github.com/BelfrySCAD/BOSL2) | A widely used OpenSCAD library of shapes, attachments, rounding and threading. Vendored as a submodule; the demo part uses it. |
+| [GNU Make](https://www.gnu.org/software/make/) | The one entry point for rendering, testing and building the docs. It picks which OpenSCAD to run and works around OpenSCAD's quirks — such as a failed `assert()` still exiting 0. |
+| [Git](https://git-scm.com/) | Version control, with submodules pinning each vendored library to an exact commit. |
+| [Python](https://www.python.org/) | The language of the tooling, never of the parts: pre-commit, MkDocs, and the template sync tool. |
+| [uv](https://docs.astral.sh/uv/) | Installs and runs every Python tool, along with the Python version it needs, so nothing is installed into the repository. |
+| [pre-commit](https://pre-commit.com/) | Checks every commit: fixes trailing whitespace and final newlines, rejects files over 500 KB (usually an STL committed by accident), checks presets parse as JSON, scans for credentials with [detect-secrets](https://github.com/Yelp/detect-secrets), and evaluates each changed `.scad` file with OpenSCAD. |
+| [MkDocs](https://www.mkdocs.org/) with [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) | Builds this site from the Markdown in `docs/`. `make docs` runs pinned versions of both through uv. |
+| [GitHub Actions](https://docs.github.com/en/actions) | CI: tests and renders every push on both OpenSCAD toolchains, uploads the renders, and builds the documentation. |
+| [GitHub Pages](https://docs.github.com/en/pages) | Hosts the documentation site, published from `main` by the docs workflow. |
+| [Xvfb](https://www.x.org/) | A virtual display, so PNG previews render without a screen (`xvfb-run make png`) — in CI, or on a headless machine. |
+| Template sync tool | `scripts/template_sync.py`, which lives only in the template. It creates projects from the template and later brings the template's changes into them, 3-way merging files that both sides edit. It has no dependencies beyond git. |
+
+## Documentation
+
+- [Getting started](getting-started.md) — requirements, installation, and setting up a
+  new project.
+- [Development](development.md) — building, variants, tests, pre-commit hooks, vendored
+  libraries, the documentation site, and releases.
+- [Parts](parts.md) — what each part is, its parameters, and how to print it.
+- [Syncing with the template](template-sync.md) — checking a project against the
+  template and pulling in its changes.

@@ -1,0 +1,54 @@
+site_name: scad-repo-template
+site_description: Baseline shape and setup for OpenSCAD projects.
+
+# Once the repository is on GitHub, uncomment these and replace <GITHUB USER>
+# with the account or organisation that owns it. site_url makes canonical links
+# and the sitemap correct on GitHub Pages; repo_url adds a repository link and
+# an edit button to every page.
+# site_url: https://<GITHUB USER>.github.io/scad-repo-template/
+# repo_url: https://github.com/<GITHUB USER>/scad-repo-template
+
+theme:
+  name: material
+  features:
+    - content.code.copy       # copy button on code blocks
+    - navigation.footer       # previous / next links under each page
+    - search.highlight        # highlight search terms on the page
+  palette:                    # follow the reader's light / dark preference
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Development: development.md
+  - Parts: parts.md
+  - Syncing with the template: template-sync.md
+
+# A build input, not a page.
+exclude_docs: |
+  requirements.txt
+
+# `make docs` builds with --strict, which turns each of these warnings into an
+# error.
+validation:
+  omitted_files: warn         # a page that isn't in nav
+  absolute_links: warn        # a link starting with /, which breaks under a sub-path
+  unrecognized_links: warn    # a link to something that isn't a page or file
+  anchors: warn               # a link to a heading that doesn't exist
+
+markdown_extensions:
+  - admonition                # !!! note style callouts
+  - pymdownx.highlight        # syntax highlighting
+  - pymdownx.inlinehilite     # inline `code` highlighting
+  - pymdownx.superfences      # fenced code inside lists and admonitions
+  - toc:
+      permalink: true         # ¶ link on each heading

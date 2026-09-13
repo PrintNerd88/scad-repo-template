@@ -1,5 +1,6 @@
 # Build products — attach to GitHub releases instead of committing.
 out/
+site/
 *.stl
 *.3mf
 *.obj
