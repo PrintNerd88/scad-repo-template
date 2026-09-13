@@ -1,4 +1,4 @@
-# Build products — attach to GitHub releases instead of committing.
+# Build products
 out/
 site/
 *.stl
@@ -10,6 +10,6 @@ site/
 *.echo
 *.csg
 
-# Local scratch / secrets (matches the convention in the sibling scad repos).
+# Local scratch / secrets
 *.local*
 *.env*
