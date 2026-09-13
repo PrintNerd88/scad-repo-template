@@ -38,6 +38,10 @@ uv run ../template/scripts/template_sync.py check .
 uv run ../template/scripts/template_sync.py update .
 ```
 
+If the template has gained an option the project hasn't chosen yet, such as the
+documentation site, `update` asks about it first and records the answer in
+`.template.toml`.
+
 Review the result and commit it. The output lists every file that isn't up to date; two
 outcomes need your attention:
 

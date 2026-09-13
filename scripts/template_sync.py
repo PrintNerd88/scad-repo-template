@@ -590,6 +590,12 @@ def effective_features(manifest: Manifest, chosen: dict[str, bool]) -> tuple[fro
 # .template.toml
 # ---------------------------------------------------------------------------
 
+FEATURES_COMMENT = (
+    "# Optional template features. A declined feature's files are not tracked;",
+    "# switching one after an update has applied it is largely manual.",
+)
+NO_FEATURES_COMMENT = "# (the template declares no optional features)"
+
 
 @dataclass(frozen=True)
 class ChildConfig:
@@ -666,7 +672,8 @@ def render_child_config(
     lines = [
         f"# {CHILD_CONFIG_NAME} -- which template this project came from and how it is",
         "# kept in sync. Written by the template's scripts/template_sync.py; `update`",
-        "# rewrites `commit`. Edit [values], [features] and [overrides] by hand.",
+        "# moves `commit`, and adds options the template has gained to [features].",
+        "# Edit [values], [features] and [overrides] by hand.",
         "",
         "[template]",
         f"url = {toml_str(url)}",
@@ -679,15 +686,13 @@ def render_child_config(
         "[features]",
     ]
     if manifest.features:
-        lines.append("# Optional template features, chosen when the project was created; a declined")
-        lines.append("# feature's files are not tracked. Switching one later is largely manual: see the")
-        lines.append("# template's documentation on syncing.")
+        lines.extend(FEATURES_COMMENT)
         for name, f in manifest.features.items():
             if f.description:
                 lines.append(f"# {f.description}")
             lines.append(f"{name} = {'true' if features.get(name, f.default) else 'false'}")
     else:
-        lines.append("# (the template declares no optional features)")
+        lines.append(NO_FEATURES_COMMENT)
     lines += [
         "",
         "[overrides]",
@@ -706,6 +711,53 @@ def bump_pin(path: Path, commit: str) -> None:
     if n != 1:
         raise ConfigError(f"{path}: could not find the `commit = ...` line to update")
     path.write_text(new, "utf-8")
+
+
+def with_feature_choices(text: str, features: dict[str, Feature], choices: dict[str, bool]) -> str:
+    """``.template.toml`` text with ``choices`` added at the end of its [features] table."""
+    entries: list[str] = []
+    for name, on in choices.items():
+        if features[name].description:
+            entries.append(f"# {features[name].description}")
+        entries.append(f"{name} = {'true' if on else 'false'}")
+    lines = text.rstrip("\n").split("\n")
+    start = next((i for i, line in enumerate(lines) if line.strip() == "[features]"), None)
+    if start is None:
+        return "\n".join([*lines, "", "[features]", *FEATURES_COMMENT, *entries]) + "\n"
+    end = next((i for i in range(start + 1, len(lines)) if lines[i].lstrip().startswith("[")), len(lines))
+    section = lines[start + 1:end]
+    if NO_FEATURES_COMMENT in section:
+        at = section.index(NO_FEATURES_COMMENT)
+        section[at:at + 1] = FEATURES_COMMENT
+    while section and not section[-1].strip():
+        section.pop()
+    rest = lines[end:]
+    return "\n".join([*lines[:start + 1], *section, *entries, *([""] if rest else []), *rest]) + "\n"
+
+
+def record_new_features(manifest: Manifest, cfg: ChildConfig, *, yes: bool) -> ChildConfig:
+    """Settle the template features a child's config doesn't mention, and write them into it.
+
+    Asked about when interactive, else their defaults; recorded either way, so
+    the choice `update` applies shows in the child's config and in its diff.
+    """
+    undecided = [name for name in manifest.features if name not in cfg.features]
+    if not undecided:
+        return cfg
+    chosen = resolve_features(manifest, cfg.features, yes=yes, intro="The template has options this project hasn't chosen yet:")
+    choices = {name: chosen.get(name, manifest.features[name].default) for name in undecided}
+    summary = ", ".join(f"{name} = {'true' if on else 'false'}" for name, on in choices.items())
+    path = cfg.root / CHILD_CONFIG_NAME
+    text = with_feature_choices(path.read_text("utf-8"), manifest.features, choices)
+    try:
+        recorded = tomllib.loads(text).get("features", {})
+    except tomllib.TOMLDecodeError:
+        recorded = {}
+    if any(recorded.get(name) != on for name, on in choices.items()):
+        raise ConfigError(f"{path}: could not add to [features]; add these by hand, then rerun: {summary}")
+    path.write_text(text, "utf-8")
+    print(f"recorded in {CHILD_CONFIG_NAME}: {summary}")
+    return load_child_config(cfg.root, manifest)
 
 
 # ---------------------------------------------------------------------------
@@ -886,6 +938,12 @@ def build_plan(manifest: Manifest, cfg: ChildConfig, *, include_seed: bool) -> S
     behind = int(git_out(root, "rev-list", "--count", f"{pin}..{head}")) if is_ancestor(root, pin, head) else None
 
     enabled, notes = effective_features(manifest, cfg.features)
+    for name, f in manifest.features.items():
+        if name not in cfg.features:
+            notes.append(
+                f"[features] {name} is unset, so its default ({'on' if f.default else 'off'}) applies; "
+                "update records a choice"
+            )
     tracked = tracked_files(root)
     head_paths = classify(manifest, [t.path for t in tracked if not t.gitlink])
     at_pin = {p for p, gl in tracked_at(root, pin).items() if not gl}
@@ -1102,6 +1160,7 @@ def cmd_update(args: argparse.Namespace, root: Path) -> int:
             f"child has uncommitted changes ({', '.join(dirty[:5])}{', ...' if len(dirty) > 5 else ''}); "
             "commit or stash them so the update is one reviewable diff, or pass --force"
         )
+    cfg = record_new_features(manifest, cfg, yes=args.yes)
     plan = build_plan(manifest, cfg, include_seed=args.seed)
     markers = [r.child_path for r in plan.results if r.status == "markers"]
     if markers:
@@ -1160,15 +1219,19 @@ def resolve_values(manifest: Manifest, given: dict[str, str], target: Path, *, y
     return values
 
 
-def resolve_features(manifest: Manifest, given: dict[str, bool], *, yes: bool) -> dict[str, bool]:
-    """Feature choices for a new child: --feature, else prompt, else (by omission) the default."""
+def resolve_features(
+    manifest: Manifest, given: dict[str, bool], *, yes: bool, intro: str | None = None
+) -> dict[str, bool]:
+    """Feature choices: those given, else asked for, else (by omission) the default."""
     chosen = dict(given)
-    if yes or not sys.stdin.isatty():
+    pending = [name for name in manifest.features if name not in chosen]
+    if yes or not pending or not sys.stdin.isatty():
         return chosen
+    if intro:
+        print(intro)
     answers = {"y": True, "yes": True, "n": False, "no": False}
-    for name, f in manifest.features.items():
-        if name in chosen:
-            continue
+    for name in pending:
+        f = manifest.features[name]
         prompt = f"{name}{f' ({f.description})' if f.description else ''} [{'Y/n' if f.default else 'y/N'}]: "
         answer = None
         while answer is None:
@@ -1297,6 +1360,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("update", help="apply the template's changes to a child and bump its pin")
     p.add_argument("child", help="path to the child project")
     p.add_argument("--seed", action="store_true", help="also install seed files added to the template since the pin")
+    p.add_argument("-y", "--yes", action="store_true", help="never prompt; options the project hasn't chosen take their defaults")
     p.add_argument("--force", action="store_true", help="proceed despite uncommitted changes in either repo")
     p.add_argument("--all", action="store_true", help="also list up-to-date files")
     p.set_defaults(func=cmd_update)

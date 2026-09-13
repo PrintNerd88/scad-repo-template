@@ -112,6 +112,9 @@ MANIFEST_V1 = (
     .replace('"child/GUIDE.md", ', "")
 )
 
+# An option the template gains after a project was created from it.
+LINT_FEATURE = '\n[features.lint]\ndescription = "lint config"\ndefault = false\nmanaged = ["lint.yml"]\n'
+
 FILES = {
     ".gitignore": "out/\n",
     "ci.yml": "name: ci\n# <template-only>\nvalidate: true\n# </template-only>\nrun: make\n",
@@ -244,6 +247,20 @@ class UnitTests(unittest.TestCase):
         # Single pass: a replacement is never itself re-substituted.
         self.assertEqual(ts.substitute("foo", {"foo": "a", "bar": "b"}, {"a": "bar", "b": "baz"}), "bar")
         self.assertEqual(ts.substitute("plain", {}, {}), "plain")
+
+    def test_with_feature_choices(self) -> None:
+        features = {"docs": ts.Feature("docs", "docs site", False, ()), "lint": ts.Feature("lint", "", True, ())}
+        # A config written when the template had no features: the placeholder comment goes.
+        placeholder = f'[values]\nproject = "x"\n\n[features]\n{ts.NO_FEATURES_COMMENT}\n\n[overrides]\n"a" = "ignore"\n'
+        out = ts.with_feature_choices(placeholder, features, {"docs": False})
+        self.assertNotIn(ts.NO_FEATURES_COMMENT, out)
+        self.assertIn("# docs site\ndocs = false\n\n[overrides]\n", out)
+        self.assertEqual(tomllib.loads(out), {"values": {"project": "x"}, "features": {"docs": False}, "overrides": {"a": "ignore"}})
+        # Appended after existing choices, or in a new table if there is none.
+        out = ts.with_feature_choices("[features]\ndocs = true\n", features, {"lint": True})
+        self.assertEqual(out, "[features]\ndocs = true\nlint = true\n")
+        out = ts.with_feature_choices('[values]\nproject = "x"\n', features, {"docs": True})
+        self.assertEqual(tomllib.loads(out)["features"], {"docs": True})
 
     def test_decide_managed(self) -> None:
         def d(base: bytes | None, theirs: bytes | None, mine: bytes | None) -> ts.FileResult:
@@ -541,6 +558,38 @@ class SyncTests(unittest.TestCase):
         code, out, err = self.fx.check()
         self.assertEqual(code, 0, err)
         self.assertIn("child pin is current", out)
+
+    def add_lint_feature(self) -> None:
+        write(self.fx.template, "template.toml", MANIFEST + LINT_FEATURE)
+        write(self.fx.template, "lint.yml", "lint: true\n")
+        self.fx.template_commit("add lint")
+
+    def test_update_records_new_feature(self) -> None:
+        self.add_lint_feature()
+        code, out, err = self.fx.check()
+        self.assertEqual(code, 0, err)
+        self.assertIn("[features] lint is unset, so its default (off) applies", out)
+        code, out, err = self.fx.update()  # not a terminal: takes the default
+        self.assertEqual(code, 0, err)
+        self.assertIn("recorded in .template.toml: lint = false", out)
+        self.assertIs(tomllib.loads(self.read(".template.toml"))["features"]["lint"], False)
+        self.assertFalse(self.exists("lint.yml"))
+        self.fx.child_commit()
+        code, out, err = self.fx.check()
+        self.assertEqual(code, 0, err)
+        self.assertNotIn("lint is unset", out)
+
+    def test_update_asks_about_new_feature(self) -> None:
+        self.add_lint_feature()
+        tty = mock.Mock(isatty=lambda: True)
+        with mock.patch("sys.stdin", tty), mock.patch("builtins.input", side_effect=["y"]) as ask:
+            code, out, err = self.fx.update()
+        self.assertEqual(code, 0, err)
+        self.assertEqual(ask.call_count, 1)
+        self.assertTrue(ask.call_args.args[0].startswith("lint (lint config) [y/N]"))
+        self.assertIn("hasn't chosen yet", out)
+        self.assertIs(tomllib.loads(self.read(".template.toml"))["features"]["lint"], True)
+        self.assertEqual(self.read("lint.yml"), "lint: true\n")
 
     def test_managed_drift_is_restored(self) -> None:
         self.edit_child(".gitignore", "out/\nmine/\n")
