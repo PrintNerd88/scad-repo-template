@@ -137,7 +137,7 @@ module boss(od, h, style = "round") {
 }
 
 // The finished part. Everything is parameterised through arguments, not
-// read from globals, so it can be `use`d from assembly.scad or tests.
+// read from globals, so another file can `use` it and pass its own values.
 module mounting_plate(
     l = plate_length,
     w = plate_width,

@@ -35,7 +35,9 @@ Saved sets live in `presets/example.json`: `default`, `large-m5` and `plain`.
 
 Fill in per part: material, layer height, orientation, supports, infill.
 
-## `assembly.scad` — visual check
+## `assemblies/example.scad` — stacked plates
 
-Composes the parts to check how they fit together; it isn't meant to be printed, though
-the Makefile's pattern rule renders it to `out/assembly.stl` along with the parts.
+An assembly, so never printed: two mounting plates, the upper one without its boss,
+stacked `stack_gap` apart (14 mm) to check that the lower plate's boss clears the upper
+plate. `make png` previews it to `out/assemblies/example.png`, each plate in its own
+colour.

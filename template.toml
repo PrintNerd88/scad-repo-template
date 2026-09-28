@@ -57,6 +57,7 @@ seed = [
   "scad-repo-template.code-workspace",
   "scripts/.gitkeep",
   "src/*.scad",
+  "src/assemblies/*.scad",
   "tests/common.scad",
 ]
 

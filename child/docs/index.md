@@ -9,7 +9,6 @@ What this project makes, and what it's for, in a sentence or two.
 | File | What it makes |
 |---|---|
 | `src/example.scad` | A demo mounting plate, to replace with your own parts |
-| `src/assembly.scad` | Nothing to print: the parts together, to check how they fit |
 
 ## Documentation
 

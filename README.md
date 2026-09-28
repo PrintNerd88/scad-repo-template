@@ -11,7 +11,8 @@ MkDocs for GitHub Pages. Projects created from the template can pull in its late
 changes with a small sync tool.
 
 The included part is a demo — a parametric mounting plate, annotated section by
-section with the convention it illustrates. Replace it.
+section with the convention it illustrates — with an assembly that stacks two of them.
+Replace both.
 
 ![preview](docs/preview.png)
 

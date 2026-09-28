@@ -6,7 +6,8 @@ Conventions for coding agents working in this repo. Humans should read these too
 
 | Dir | Rule |
 |---|---|
-| `src/` | Each file instantiates geometry at top level. Parameters at the top in Customizer format. Imports from `lib/` and `vendor/` via `use <>`. |
+| `src/` | One printed part per file, rendered to `out/<name>.stl`. Each file instantiates geometry at top level. Parameters at the top in Customizer format. Imports from `lib/` and `vendor/` via `use <>`. |
+| `src/assemblies/` | Optional. Each file places parts together to check how they fit, with a `color()` per part, and is never printed: `make stl` skips it, `make png` previews it, `make test` fails if it no longer evaluates cleanly. Imports are one level deeper: `use <../part.scad>`, `include <../../vendor/BOSL2/std.scad>`. |
 | `lib/` | Definitions only — `module` and `function`. No top-level geometry, no reliance on globals; all inputs are parameters. Safe to `use <>` from anywhere. |
 | `vendor/` | Never edited. Pinned via submodule commit. Referenced by relative path, never `OPENSCADPATH`. |
 | `presets/` | Customizer JSON. Selected at build time with `-p presets/x.json -P setname`. |
@@ -24,8 +25,8 @@ Conventions for coding agents working in this repo. Humans should read these too
 - New parameters go in the Customizer block at the top of the part file, with a
   `/* [Group] */` header and a `// [min:max]` range annotation.
 - Prefer `$fa`/`$fs` over a global `$fn`. `$fn` on a single small feature is fine.
-- One top-level call at the bottom of a part file, wrapped in a module, so the file can
-  also be `use`d by `src/assembly.scad`.
+- One top-level call at the bottom of a part file, wrapped in a module, so another file
+  can `use <>` it and call the module without also rendering the part.
 - Run `make test` and `make stl` before proposing changes; do not commit anything under `out/`.
 - Keep the documentation in step with the code: a change to documented behaviour updates it in
   the same commit.

@@ -23,7 +23,6 @@ The documentation, from requirements to development, starts at
 | File | What it makes |
 |---|---|
 | `src/example.scad` | A demo mounting plate, to replace with your own parts |
-| `src/assembly.scad` | Nothing to print: the parts together, to check how they fit |
 
 ## Getting started
 
@@ -58,8 +57,8 @@ follows are in [AGENTS.md](AGENTS.md).
 | Command | Result |
 |---|---|
 | `make` / `make stl` | Renders every `src/*.scad` to `out/*.stl` |
-| `make png` | Renders previews to `out/*.png`; without a display, `xvfb-run make png` |
-| `make test` | Runs `tests/*.scad` |
+| `make png` | Renders previews of the parts, and of any assemblies in `src/assemblies/`, into `out/`; without a display, `xvfb-run make png` |
+| `make test` | Runs `tests/*.scad`, and fails if an assembly no longer evaluates cleanly |
 | `make toolchain` | Shows which OpenSCAD is in use |
 | `make clean` | Removes `out/` |
 | `make help` | Lists the targets |

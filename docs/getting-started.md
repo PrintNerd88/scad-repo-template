@@ -74,7 +74,9 @@ hand. Keeping the project up to date afterwards is covered in
 3. Confirm the toolchain: `make toolchain`, then `make test` and `make stl`.
 4. Check that `out/` is ignored: `git status` shows no STL after step 3.
 5. Replace the demo part: rename `src/example.scad` and its `mounting_plate()` module,
-   and update `presets/example.json` to match.
+   and update `presets/example.json` to match. Then either rewrite the demo assembly,
+   `src/assemblies/example.scad`, to place your own parts, or, for a single-part project,
+   delete it; nothing else refers to it.
 6. Rewrite `README.md` and, with the documentation site, the pages in `docs/`. They start
    out generic: a placeholder where the project's description goes, and the demo part in
    the parts table.

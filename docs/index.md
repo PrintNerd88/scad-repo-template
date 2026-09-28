@@ -11,7 +11,8 @@ MkDocs for GitHub Pages. Projects created from the template can pull in its late
 changes with a small sync tool.
 
 The included part is a demo — a parametric mounting plate, annotated section by
-section with the convention it illustrates. Replace it.
+section with the convention it illustrates — with an assembly that stacks two of them.
+Replace both.
 
 ![Rendered preview of the demo mounting plate](preview.png)
 
@@ -19,7 +20,8 @@ section with the convention it illustrates. Replace it.
 
 | Path | Holds |
 |---|---|
-| `src/` | Printable parts and assemblies, one `.scad` file per output file. Each keeps its Customizer parameters at the top and a single top-level call at the bottom, so it renders on its own and can also be `use`d by an assembly. |
+| `src/` | Printable parts, one `.scad` file per STL. Each keeps its Customizer parameters at the top and a single top-level call at the bottom, so it renders on its own and other files can `use` it. |
+| `src/assemblies/` | Optional: assemblies, which place parts together to check how they fit. Never printed — `make png` previews them and `make test` checks they still evaluate. See [Assemblies](development.md#assemblies). |
 | `lib/` | Project-local modules and functions. Definitions only — no top-level geometry, no reliance on globals — so any file can `use <>` them safely. |
 | `vendor/` | Third-party libraries as git submodules, pinned to exact commits and never edited. BOSL2 is included. |
 | `presets/` | Customizer parameter sets (`.json`), for rendering variants of a part. |

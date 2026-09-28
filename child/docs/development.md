@@ -8,8 +8,8 @@ follows are in `AGENTS.md`, also at the repository root.
 | Command | Result |
 |---|---|
 | `make` / `make stl` | Renders every `src/*.scad` to `out/*.stl` |
-| `make png` | Renders previews to `out/*.png`; without a display, `xvfb-run make png` |
-| `make test` | Runs `tests/*.scad` |
+| `make png` | Renders previews of the parts, and of any assemblies in `src/assemblies/`, into `out/`; without a display, `xvfb-run make png` |
+| `make test` | Runs `tests/*.scad`, and fails if an assembly no longer evaluates cleanly |
 | `make docs` | Builds this documentation into `site/`, failing on any warning |
 | `make docs-serve` | Serves it at <http://127.0.0.1:8000>, rebuilding on every save |
 | `make toolchain` | Shows which OpenSCAD is in use |

@@ -8,8 +8,8 @@ The conventions each directory follows are in `AGENTS.md`, also at the repositor
 | Command | Result |
 |---|---|
 | `make` / `make stl` | Renders every `src/*.scad` to `out/*.stl` |
-| `make png` | Renders previews to `out/*.png` (needs a display; see below) |
-| `make test` | Runs `tests/*.scad` |
+| `make png` | Renders previews of the parts, and of any assemblies, into `out/` (needs a display; see below) |
+| `make test` | Runs `tests/*.scad`, and fails if an assembly no longer evaluates cleanly |
 | `make docs` | Builds the documentation into `site/`, failing on any warning |
 | `make docs-serve` | Serves the documentation at <http://127.0.0.1:8000>, rebuilding on every save |
 | `make clean` | Removes `out/` and `site/` |
@@ -47,6 +47,21 @@ rather than generalising the pattern rule:
 openscad -D 'plate_length=120' -o out/plate-long.stl src/example.scad
 openscad -p presets/example.json -P large-m5 -o out/plate-large.stl src/example.scad
 ```
+
+## Assemblies
+
+A project of several parts can check how they fit together with an assembly: a file in
+`src/assemblies/` that `use`s the parts and places them, giving each its own `color()`.
+Imports are one level deeper than in a part — `use <../part.scad>`, and
+`include <../../vendor/BOSL2/std.scad>` whenever a part it places uses BOSL2.
+
+Assemblies are never printed, so `make stl` skips them. `make png` previews each one to
+`out/assemblies/`, in preview mode rather than as a full render, so each part keeps its
+colour and any `%` reference geometry stays visible. `make test` evaluates each one and
+fails on any error or warning, which catches an assembly that a change to a part has broken.
+
+The directory is optional: a single-part project has no assemblies, and needs no
+`src/assemblies/` at all.
 
 ## Tests
 

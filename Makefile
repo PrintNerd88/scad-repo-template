@@ -43,6 +43,11 @@ FLAGS    ?= $(MANIFOLD) --export-format=binstl
 PARTS    := $(patsubst src/%.scad,%,$(wildcard src/*.scad))
 STLS     := $(addprefix out/,$(addsuffix .stl,$(PARTS)))
 PNGS     := $(addprefix out/,$(addsuffix .png,$(PARTS)))
+# Assemblies place parts together to check how they fit, and are never printed:
+# src/*.scad above doesn't reach into src/assemblies/, so they get previews and
+# a check in `make test`, but no STL.
+ASSEMBLIES    := $(wildcard src/assemblies/*.scad)
+ASSEMBLY_PNGS := $(patsubst src/%.scad,out/%.png,$(ASSEMBLIES))
 TESTS    := $(wildcard tests/*.scad)
 DEPS     := $(wildcard lib/*.scad)
 
@@ -50,12 +55,21 @@ DEPS     := $(wildcard lib/*.scad)
 all: stl
 
 stl: $(STLS)
-png: $(PNGS)
+png: $(PNGS) $(ASSEMBLY_PNGS)
 
 out/%.stl: src/%.scad $(DEPS) | out
 	$(OPENSCAD) $(FLAGS) -o $@ $<
 
 # PNG export needs a display on most builds: use `xvfb-run make png` if headless.
+#
+# An assembly depends on the parts it places, and is previewed rather than
+# rendered: a render drops each part's color() on the CGAL backend, and drops %
+# reference geometry on every backend. This rule must precede out/%.png, which
+# also matches: make 3.81, still macOS's, takes the first matching pattern rule
+# rather than the most specific.
+out/assemblies/%.png: src/assemblies/%.scad $(wildcard src/*.scad) $(DEPS) | out/assemblies
+	$(OPENSCAD) --preview --imgsize=1200,900 --colorscheme=Tomorrow -o $@ $<
+
 out/%.png: src/%.scad $(DEPS) | out
 	$(OPENSCAD) --render --imgsize=1200,900 --colorscheme=Tomorrow -o $@ $<
 
@@ -63,11 +77,17 @@ out/%.png: src/%.scad $(DEPS) | out
 # (2021.01 and the 2026.08 nightly) exits 0 even when an assert fails, reporting
 # it only in the echo stream, so grep the output instead of trusting the exit
 # code. This is not a legacy workaround — do not reduce it to relying on $$?.
-test: $(TESTS) | out
+#
+# Assemblies are evaluated here too, since `make stl` never builds them. This is
+# what catches one broken by a change to a part: a renamed module, a moved file
+# or a failed assert is likewise only a WARNING or ERROR in the echo stream.
+# Each log lands at the source's path under out/, minus src/.
+test: $(TESTS) $(ASSEMBLIES) | out
 	@fail=0; \
-	for t in $(TESTS); do \
+	for t in $(TESTS) $(ASSEMBLIES); do \
 		echo "== $$t"; \
-		log=out/$$(basename $$t .scad).echo; \
+		log=out/$${t#src/}; log=$${log%.scad}.echo; \
+		mkdir -p $$(dirname $$log); \
 		$(OPENSCAD) --export-format=echo -o $$log $$t || fail=1; \
 		[ -s $$log ] && sed 's/^/   /' $$log; \
 		grep -qE '^(ERROR|WARNING|TRACE)' $$log 2>/dev/null && fail=1; \
@@ -110,8 +130,8 @@ docs-serve:
 
 help:
 	@echo "make            build STLs into out/ (same as 'make stl')"
-	@echo "make png        render previews into out/"
-	@echo "make test       run tests/*.scad"
+	@echo "make png        render previews of parts and assemblies into out/"
+	@echo "make test       run tests/*.scad and check every assembly still evaluates"
 # <template-only feature="docs">
 	@echo "make docs       build the documentation into site/"
 	@echo "make docs-serve preview the documentation at http://127.0.0.1:8000"
@@ -121,8 +141,8 @@ help:
 	@echo
 	@echo "Override the binary with: make OPENSCAD=openscad"
 
-out:
-	mkdir -p out
+out out/assemblies:
+	mkdir -p $@
 
 clean:
 	rm -rf out
