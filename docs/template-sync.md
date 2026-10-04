@@ -70,7 +70,8 @@ The template is a working project too, and some of it is for the template alone:
 README and this site, the sync tool, the `template-*` make targets. Excluded files,
 template-only sections marked in comments, and the generic stand-ins under `child/` keep
 all of that out of projects. The rules for each — markers, tokens, `child/`, and when to
-bump the manifest format — are in the template-maintenance section of `AGENTS.md`.
+bump the manifest format — are in the comments of `template.toml` and
+`scripts/template_sync.py`.
 
 To see what a change does to projects, create a throwaway project before making it, then
 check that project as you go:

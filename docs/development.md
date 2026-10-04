@@ -1,7 +1,6 @@
 # Development
 
 Everything runs through `make` from the repository root; `make help` lists the targets.
-The conventions each directory follows are in `AGENTS.md`, also at the repository root.
 
 ## Build
 

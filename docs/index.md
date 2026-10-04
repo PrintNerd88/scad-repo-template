@@ -35,7 +35,7 @@ Replace them.
 | `Makefile` | Every build, test and documentation command — see [Development](development.md). |
 | `mkdocs.yml` | Documentation site settings and page order. |
 | `.pre-commit-config.yaml` | The checks run before every commit. |
-| `AGENTS.md` | Conventions for coding agents, and for humans: the rule each directory follows, how to import, and the OpenSCAD toolchain gotchas behind them. |
+| `AGENTS.md` | Instructions for coding agents working in the repository. |
 | `.template.toml` | Only in a project created from the template: the template commit the project was last synced with, and its sync settings — see [Syncing with the template](template-sync.md). |
 
 Alongside these sit `README.md`, `LICENSE`, `.gitignore`, `.gitmodules` (the submodule

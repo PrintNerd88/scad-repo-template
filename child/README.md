@@ -54,8 +54,7 @@ Cloned without `--recurse-submodules`? Run `git submodule update --init`.
 
 ## Development
 
-Everything runs through `make` from the repository root. The rules each directory
-follows are in [AGENTS.md](AGENTS.md).
+Everything runs through `make` from the repository root.
 
 | Command | Result |
 |---|---|

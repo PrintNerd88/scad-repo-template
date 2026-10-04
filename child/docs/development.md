@@ -1,7 +1,6 @@
 # Development
 
-Everything runs through `make` from the repository root. The rules each directory
-follows are in `AGENTS.md`, also at the repository root.
+Everything runs through `make` from the repository root.
 
 ## Build and test
 
