@@ -10,9 +10,10 @@ nightly and stable toolchains, a README, and optionally a documentation site bui
 MkDocs for GitHub Pages. Projects created from the template can pull in its later
 changes with a small sync tool.
 
-The included part is a demo — a parametric mounting plate, annotated section by
-section with the convention it illustrates — with an assembly that stacks two of them.
-Replace both.
+The included parts are a demo — a parametric mounting plate, annotated section by
+section with the convention it illustrates, and a cap that fits over its boss — with the
+measurements they share in one file and an assembly that seats the cap on the plate.
+Replace them.
 
 ![Rendered preview of the demo mounting plate](preview.png)
 
@@ -20,11 +21,11 @@ Replace both.
 
 | Path | Holds |
 |---|---|
-| `src/` | Printable parts, one `.scad` file per STL. Each keeps its Customizer parameters at the top and a single top-level call at the bottom, so it renders on its own and other files can `use` it. |
-| `src/assemblies/` | Optional: assemblies, which place parts together to check how they fit. Never printed — `make png` previews them and `make test` checks they still evaluate. See [Assemblies](development.md#assemblies). |
+| `src/` | Printable parts, one `.scad` file per STL. Each has a single top-level call at the bottom, so it renders on its own and other files can `use` it. |
+| `src/params.scad` | Every measurement of the parts, which each part includes, so they always fit each other. Not a part: it draws nothing. See [Parts, measurements and the assembly](development.md#parts-measurements-and-the-assembly). |
+| `src/assembly.scad` | The parts placed together, to check how they fit. Never printed — `make png` previews it and `make test` checks it still evaluates. |
 | `lib/` | Project-local modules and functions. Definitions only — no top-level geometry, no reliance on globals — so any file can `use <>` them safely. |
 | `vendor/` | Third-party libraries as git submodules, pinned to exact commits and never edited. BOSL2 is included. |
-| `presets/` | Customizer parameter sets (`.json`), for rendering variants of a part. |
 | `tests/` | `.scad` files that `assert()` on the functions in `lib/`, run headlessly by `make test`. |
 | `docs/` | This documentation, and the images the README uses. |
 | `scripts/` | Helper scripts, for whatever the Makefile can't reasonably do. |
@@ -63,7 +64,7 @@ by double-clicking the file.
 | [Git](https://git-scm.com/) | Version control, with submodules pinning each vendored library to an exact commit. |
 | [Python](https://www.python.org/) | The language of the tooling, never of the parts: pre-commit, MkDocs, and the template sync tool. |
 | [uv](https://docs.astral.sh/uv/) | Installs and runs every Python tool, along with the Python version it needs, so nothing is installed into the repository. |
-| [pre-commit](https://pre-commit.com/) | Checks every commit: fixes trailing whitespace and final newlines, rejects files over 500 KB (usually an STL committed by accident), checks presets parse as JSON, scans for credentials with [detect-secrets](https://github.com/Yelp/detect-secrets), and evaluates each changed `.scad` file with OpenSCAD. |
+| [pre-commit](https://pre-commit.com/) | Checks every commit: fixes trailing whitespace and final newlines, rejects files over 500 KB (usually an STL committed by accident), checks JSON files parse, scans for credentials with [detect-secrets](https://github.com/Yelp/detect-secrets), and evaluates each changed `.scad` file with OpenSCAD. |
 | [MkDocs](https://www.mkdocs.org/) with [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) | Builds this site from the Markdown in `docs/`, and a project's site if it has one. `make docs` runs pinned versions of both through uv. |
 | [GitHub Actions](https://docs.github.com/en/actions) | CI: tests and renders every push on both OpenSCAD toolchains, uploads the renders, and builds the documentation. |
 | [GitHub Pages](https://docs.github.com/en/pages) | Hosts the documentation site, published from `main` by the docs workflow. |

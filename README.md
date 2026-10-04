@@ -10,9 +10,10 @@ nightly and stable toolchains, a README, and optionally a documentation site bui
 MkDocs for GitHub Pages. Projects created from the template can pull in its later
 changes with a small sync tool.
 
-The included part is a demo — a parametric mounting plate, annotated section by
-section with the convention it illustrates — with an assembly that stacks two of them.
-Replace both.
+The included parts are a demo — a parametric mounting plate, annotated section by
+section with the convention it illustrates, and a cap that fits over its boss — with the
+measurements they share in one file and an assembly that seats the cap on the plate.
+Replace them.
 
 ![preview](docs/preview.png)
 

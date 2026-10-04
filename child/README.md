@@ -22,7 +22,10 @@ The documentation, from requirements to development, starts at
 
 | File | What it makes |
 |---|---|
-| `src/example.scad` | A demo mounting plate, to replace with your own parts |
+| `src/params.scad` | The measurements of every part, which each one includes |
+| `src/plate.scad` | A demo mounting plate, to replace with your own parts |
+| `src/cap.scad` | A demo cap that fits over the plate's boss, likewise |
+| `src/assembly.scad` | The parts together, to check how they fit; not printed |
 
 ## Getting started
 
@@ -56,9 +59,9 @@ follows are in [AGENTS.md](AGENTS.md).
 
 | Command | Result |
 |---|---|
-| `make` / `make stl` | Renders every `src/*.scad` to `out/*.stl` |
-| `make png` | Renders previews of the parts, and of any assemblies in `src/assemblies/`, into `out/`; without a display, `xvfb-run make png` |
-| `make test` | Runs `tests/*.scad`, and fails if an assembly no longer evaluates cleanly |
+| `make` / `make stl` | Renders every part in `src/` to `out/*.stl` |
+| `make png` | Renders previews of the parts and of `src/assembly.scad` into `out/`; without a display, `xvfb-run make png` |
+| `make test` | Runs `tests/*.scad`, and fails if `src/assembly.scad` no longer evaluates cleanly |
 | `make toolchain` | Shows which OpenSCAD is in use |
 | `make clean` | Removes `out/` |
 | `make help` | Lists the targets |

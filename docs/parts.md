@@ -2,7 +2,12 @@
 
 One section per file in `src/`: what it makes, its parameters, and how to print it.
 
-## `example.scad` — mounting plate
+Every measurement is in `src/params.scad`, which each part includes, so the plate and the
+cap always fit each other. To change one, edit that file; OpenSCAD's Customizer panel
+doesn't show them when a part is open. To build a variant, override them with `-D` (see
+[Variants](development.md#variants)).
+
+## `plate.scad` — mounting plate
 
 The demo part: a rectangular plate with rounded vertical corners, a grid of screw
 clearance holes, and an optional centred boss, round or hexagonal. Each section of the
@@ -10,9 +15,6 @@ file is annotated with the OpenSCAD convention it illustrates. Units are millime
 the plate sits in the positive octant with its bottom-left-front corner at the origin.
 
 ### Parameters
-
-Open the part in OpenSCAD and use **Window → Customizer**, or edit the block at the top
-of `src/example.scad`.
 
 | Parameter | Default | Range | Meaning |
 |---|---|---|---|
@@ -25,19 +27,37 @@ of `src/example.scad`.
 | `hole_size` | `M3` | M2…M5 | Screw size; drives clearance diameter |
 | `hole_margin` | 6 | — | Edge to hole centre (mm) |
 | `add_boss` | `true` | bool | Add the centred boss |
-| `boss_od` | 12 | 6–30 | Boss outer diameter (mm) |
+| `boss_od` | 12 | 6–30 | Boss outer diameter, across flats when hex (mm) |
 | `boss_height` | 8 | 2–30 | Boss height (mm) |
 | `boss_style` | `round` | round, hex | Boss profile |
-
-Saved sets live in `presets/example.json`: `default`, `large-m5` and `plain`.
 
 ### Print settings
 
 Fill in per part: material, layer height, orientation, supports, infill.
 
-## `assemblies/example.scad` — stacked plates
+## `cap.scad` — boss cap
 
-An assembly, so never printed: two mounting plates, the upper one without its boss,
-stacked `stack_gap` apart (14 mm) to check that the lower plate's boss clears the upper
-plate. `make png` previews it to `out/assemblies/example.png`, each plate in its own
+A cup that fits over the plate's boss: round or hexagonal inside, as the boss is, with
+clearance all round from `clearance()` in `lib/common.scad`. It reads the boss's
+measurements from `params.scad`, so it follows any change to the boss. It refuses to
+render if `cap_depth` would reach down to the plate.
+
+### Parameters
+
+| Parameter | Default | Range | Meaning |
+|---|---|---|---|
+| `cap_fit` | `normal` | tight, normal, loose | Clearance round the boss |
+| `cap_wall` | 2 | 0.8–5, step 0.2 | Side wall thickness (mm) |
+| `cap_top` | 2 | 0.8–5, step 0.2 | Closed end thickness (mm) |
+| `cap_depth` | 6 | 1–30, step 0.5 | How far it reaches down the boss; less than `boss_height` (mm) |
+
+### Print settings
+
+The STL stands it on its closed end, so it prints without support.
+
+## `assembly.scad` — cap on the plate
+
+Not a part, so never printed: the plate with the cap seated on its boss, the cap
+see-through so the boss shows inside it. `cap_lift` raises the cap off the boss to see
+both; 0 seats it. `make png` previews it to `out/assembly.png`, each part in its own
 colour.

@@ -7,9 +7,9 @@ The conventions each directory follows are in `AGENTS.md`, also at the repositor
 
 | Command | Result |
 |---|---|
-| `make` / `make stl` | Renders every `src/*.scad` to `out/*.stl` |
-| `make png` | Renders previews of the parts, and of any assemblies, into `out/` (needs a display; see below) |
-| `make test` | Runs `tests/*.scad`, and fails if an assembly no longer evaluates cleanly |
+| `make` / `make stl` | Renders every part in `src/` to `out/*.stl` |
+| `make png` | Renders previews of the parts and the assembly into `out/` (needs a display; see below) |
+| `make test` | Runs `tests/*.scad`, and fails if the assembly no longer evaluates cleanly |
 | `make docs` | Builds the documentation into `site/`, failing on any warning |
 | `make docs-serve` | Serves the documentation at <http://127.0.0.1:8000>, rebuilding on every save |
 | `make clean` | Removes `out/` and `site/` |
@@ -36,32 +36,49 @@ make OPENSCAD_CANDIDATES='foo bar'       # change the auto-detect search order
 make FLAGS='--export-format=binstl'      # force flags (skips the manifold probe)
 ```
 
+## Parts, measurements and the assembly
+
+`src/` holds one file per printed part, and two more that aren't parts:
+
+- `params.scad` holds every measurement, in the Customizer format: grouped under
+  `/* [Group] */` headers, with a range in a trailing comment and a description above.
+  Each part `include`s it, so parts that have to fit each other read the same values.
+  Change a measurement there, never in a part file. It draws nothing, so `make` builds
+  nothing from it.
+- `assembly.scad` `use`s the parts and places them together, giving each its own
+  `color()`, to check how they fit. It is never printed, so `make stl` skips it.
+  `make png` previews it, rather than rendering it, so each part keeps its colour and any
+  `%` reference geometry stays visible. `make test` evaluates it and fails on any error
+  or warning, which catches an assembly that a change to a part has broken. A
+  single-part project can delete it.
+
+A part file keeps only its render quality in its own Customizer block, and wraps its
+geometry in a module whose arguments default to the values in `params.scad`.
+
+OpenSCAD's Customizer panel only shows the opened file's own parameters, so it doesn't
+show the measurements when a part is open. Edit `params.scad` instead.
+
 ## Variants
 
-Each part's parameters sit in the Customizer block at the top of its file. Override them
-on the command line, or save named sets into `presets/` from OpenSCAD's
-**Window → Customizer**. Add an explicit Makefile target for each variant you want built,
-rather than generalising the pattern rule:
+To build a part with different measurements, override them with `-D`. String values
+need their quotes:
 
 ```bash
-openscad -D 'plate_length=120' -o out/plate-long.stl src/example.scad
-openscad -p presets/example.json -P large-m5 -o out/plate-large.stl src/example.scad
+openscad -D 'plate_length=120' -D 'hole_size="M5"' -o out/plate-long.stl src/plate.scad
 ```
 
-## Assemblies
+Add an explicit Makefile target for each variant you want built, rather than
+generalising the pattern rule:
 
-A project of several parts can check how they fit together with an assembly: a file in
-`src/assemblies/` that `use`s the parts and places them, giving each its own `color()`.
-Imports are one level deeper than in a part — `use <../part.scad>`, and
-`include <../../vendor/BOSL2/std.scad>` whenever a part it places uses BOSL2.
+```make
+stl: out/plate-long.stl
+out/plate-long.stl: src/plate.scad src/params.scad $(DEPS) | out
+	$(OPENSCAD) $(FLAGS) -D 'plate_length=120' -o $@ $<
+```
 
-Assemblies are never printed, so `make stl` skips them. `make png` previews each one to
-`out/assemblies/`, in preview mode rather than as a full render, so each part keeps its
-colour and any `%` reference geometry stays visible. `make test` evaluates each one and
-fails on any error or warning, which catches an assembly that a change to a part has broken.
-
-The directory is optional: a single-part project has no assemblies, and needs no
-`src/assemblies/` at all.
+The Customizer's JSON presets don't work here: on the nightly, a preset only reaches
+parameters in the opened file, never those in `params.scad`. `-D` does, on both
+toolchains.
 
 ## Tests
 
@@ -79,7 +96,7 @@ instead of trusting the exit code.
 Run `pre-commit install` once per clone; the hooks then check every commit, and
 `pre-commit run --all-files` checks the whole tree on demand. They fix trailing
 whitespace and missing final newlines, reject files over 500 KB (usually an STL
-committed by accident), check that presets parse as JSON, scan for credentials, and
+committed by accident), check that JSON files parse, scan for credentials, and
 evaluate every changed `.scad` file outside `vendor/` with OpenSCAD.
 
 That last check is a full render, which gets slow on large parts;

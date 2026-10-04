@@ -1,39 +1,23 @@
-// example.scad — parametric mounting plate. Template main part.
+// plate.scad — parametric mounting plate. Template main part.
 //
 // Purpose: demonstrate OpenSCAD conventions, not to be a useful part.
 // Every section is annotated with the convention it illustrates.
+// Its measurements are in params.scad, shared with cap.scad, which fits
+// over the boss; assembly.scad shows the two together.
 // Units: millimetres. Origin: bottom-left-front corner of the plate, Z up,
 // so the part occupies the positive octant: x in [0,l], y in [0,w], z in [0,t].
 //
 // Requires: OpenSCAD 2021.01+ (2025.x recommended), BOSL2 in vendor/.
-// Build:    make stl   |   openscad -o out/example.stl src/example.scad
+// Build:    make stl   |   openscad -o out/plate.stl src/plate.scad
 
 // ---------------------------------------------------------------------------
 // 1. CUSTOMIZER PARAMETERS
+//    - Measurements live in params.scad, so every part that shares one reads
+//      the same value. Add new ones there, never here.
+//    - What stays here is only this file's own: render quality.
 //    - Top of file, before any include/use, so they're the first thing a
 //      reader sees and the Customizer picks them up.
-//    - Group with /* [Name] */ headers. Annotate ranges/choices in a trailing
-//      comment; that comment IS the widget definition.
-//    - snake_case throughout. Units in the name or comment when not mm.
 // ---------------------------------------------------------------------------
-
-/* [Plate] */
-plate_length = 60;        // [20:200]
-plate_width  = 40;        // [20:200]
-plate_thick  = 3;         // [1.5:0.5:10]
-corner_round = 4;         // [0:0.5:10]
-
-/* [Mounting holes] */
-hole_count_x = 2;         // [1:6]
-hole_count_y = 2;         // [1:6]
-hole_size    = "M3";      // [M2, M2.5, M3, M4, M5]
-hole_margin  = 6;         // distance from edge to hole centre
-
-/* [Boss] */
-add_boss     = true;
-boss_od      = 12;        // [6:30]
-boss_height  = 8;         // [2:30]
-boss_style   = "round";   // [round, hex]
 
 /* [Quality] */
 // Prefer $fa/$fs over a global $fn: resolution scales with feature size.
@@ -41,23 +25,21 @@ boss_style   = "round";   // [round, hex]
 $fa = $preview ? 6 : 2;
 $fs = $preview ? 1 : 0.4;
 
-/* [Hidden] */
-// Internals that must be top-level but shouldn't appear in the Customizer.
-eps = 0.01;               // overlap fudge so booleans don't leave zero-thickness faces
-
 // Anything below this line is hidden from the Customizer regardless of group.
 module __Customizer_Limit__ () {}
 
 // ---------------------------------------------------------------------------
 // 2. IMPORTS
 //    - include <> : textual paste — needed for BOSL2 (it defines constants
-//      like TOP/BOTTOM/CENTER and $-variables that `use` would not export).
-//    - use <>     : definitions only — correct for your own lib/ files.
+//      like TOP/BOTTOM/CENTER and $-variables that `use` would not export),
+//      and for params.scad, whose variables `use` would not import either.
+//    - use <>     : definitions only — correct for your own lib/ files, as
+//      cap.scad does.
 //    - Relative paths, never OPENSCADPATH.
 // ---------------------------------------------------------------------------
 
 include <../vendor/BOSL2/std.scad>
-// use <../lib/common.scad>          // uncomment when lib/ has content
+include <params.scad>
 
 // ---------------------------------------------------------------------------
 // 3. CONSTANTS AND LOOKUP DATA
@@ -136,8 +118,9 @@ module boss(od, h, style = "round") {
     }
 }
 
-// The finished part. Everything is parameterised through arguments, not
-// read from globals, so another file can `use` it and pass its own values.
+// The finished part. Everything is parameterised through arguments, which
+// default to the values in params.scad, so another file can `use` it and
+// pass its own.
 module mounting_plate(
     l = plate_length,
     w = plate_width,

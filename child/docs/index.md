@@ -8,7 +8,10 @@ What this project makes, and what it's for, in a sentence or two.
 
 | File | What it makes |
 |---|---|
-| `src/example.scad` | A demo mounting plate, to replace with your own parts |
+| `src/params.scad` | The measurements of every part, which each one includes |
+| `src/plate.scad` | A demo mounting plate, to replace with your own parts |
+| `src/cap.scad` | A demo cap that fits over the plate's boss, likewise |
+| `src/assembly.scad` | The parts together, to check how they fit; not printed |
 
 ## Documentation
 

@@ -6,11 +6,11 @@ Conventions for coding agents working in this repo. Humans should read these too
 
 | Dir | Rule |
 |---|---|
-| `src/` | One printed part per file, rendered to `out/<name>.stl`. Each file instantiates geometry at top level. Parameters at the top in Customizer format. Imports from `lib/` and `vendor/` via `use <>`. |
-| `src/assemblies/` | Optional. Each file places parts together to check how they fit, with a `color()` per part, and is never printed: `make stl` skips it, `make png` previews it, `make test` fails if it no longer evaluates cleanly. Imports are one level deeper: `use <../part.scad>`, `include <../../vendor/BOSL2/std.scad>`. |
+| `src/` | One printed part per file, rendered to `out/<name>.stl`, beside `params.scad` and `assembly.scad`, which are not parts. Each part instantiates geometry at top level, `include`s `params.scad`, and imports from `lib/` and `vendor/`. |
+| `src/params.scad` | Every measurement of the parts, in Customizer format, so they always fit each other. Variables only: it draws nothing, and `make` builds nothing from it. |
+| `src/assembly.scad` | The parts placed together to check how they fit, with a `color()` per part. Never printed: `make stl` skips it, `make png` previews it, `make test` fails if it no longer evaluates cleanly. A single-part project can delete it. |
 | `lib/` | Definitions only — `module` and `function`. No top-level geometry, no reliance on globals; all inputs are parameters. Safe to `use <>` from anywhere. |
 | `vendor/` | Never edited. Pinned via submodule commit. Referenced by relative path, never `OPENSCADPATH`. |
-| `presets/` | Customizer JSON. Selected at build time with `-p presets/x.json -P setname`. |
 | `tests/` | Files that `assert()` on function outputs. |
 | `docs/` | Documentation, and the images it uses. |
 | `out/` | Build products only. Gitignored. Attach to GitHub releases instead. |
@@ -19,11 +19,17 @@ Conventions for coding agents working in this repo. Humans should read these too
 
 - `lib/` files contain definitions only; never add top-level geometry there.
 - Use `use <>` unless the library documents that it needs `include <>` (BOSL2 requires `include <BOSL2/std.scad>`).
+  `src/params.scad` is `include`d too: it is variables, which `use` does not import.
 - Relative imports only; never `OPENSCADPATH`. It resolves at process start against the
   user's environment, not the opened file, so it breaks for anyone who clones the repo or
   double-clicks a `.scad` in a file manager.
-- New parameters go in the Customizer block at the top of the part file, with a
-  `/* [Group] */` header and a `// [min:max]` range annotation.
+- New parameters go in `src/params.scad`, never in a part file, under a `/* [Group] */`
+  header, with a `// [min:max]` range annotation and a comment saying what each one is.
+  A part file's own Customizer block holds only `[Quality]`, and the assembly's only what
+  it shows. A part's module takes each measurement as an argument, defaulting to its
+  value from `params.scad`.
+- A variant is a Makefile target that overrides parameters with `-D`, not a Customizer
+  preset; see the Customizer gotcha below.
 - Prefer `$fa`/`$fs` over a global `$fn`. `$fn` on a single small feature is fine.
 - One top-level call at the bottom of a part file, wrapped in a module, so another file
   can `use <>` it and call the module without also rendering the part.
@@ -60,6 +66,11 @@ These are load-bearing; do not "simplify" them away.
   `use <other_part.scad>`: BOSL2's `diff()`/`tag()` machinery reads globals like
   `$tags_shown` that `use` will not import. Symptom is an empty render on 2021.01 or an
   assert inside `attachments.scad` on 2025+.
+- **The Customizer only sees the opened file's own parameters.** On the nightly, its
+  panel and `-p`/`-P` presets ignore every parameter that comes from
+  `include <params.scad>` — silently, so a preset renders the defaults; 2021.01 does apply
+  presets to them. Hence no `presets/`. `-D` reaches `include`d and `use`d files on both
+  versions, so variants use it.
 - **`$parent_modules` is `undef` at file scope**, so `if ($parent_modules == 0)` guards
   render nothing at all. No guard is needed — `use <>` already skips top-level geometry.
 - **BOSL2 anchors: `FRONT` is the `-Y` face**, so `anchor = BOTTOM+LEFT+FRONT` makes a
