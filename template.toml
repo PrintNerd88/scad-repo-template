@@ -46,6 +46,7 @@ managed = [
 ]
 merge = [
   "AGENTS.md",                # projects add their own rules
+  "CLAUDE.md",                # imports AGENTS.md; projects may add to it
   "Makefile",                 # projects add their own targets, e.g. for variants
 ]
 seed = [
