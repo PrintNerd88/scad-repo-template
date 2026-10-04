@@ -14,19 +14,12 @@
 
 On Windows, run everything from Git Bash, with OpenSCAD's install directory on `PATH`.
 
-## Install
+## Clone the template
 
 ```bash
 git clone --recurse-submodules <repository-url>
-cd <repository>
-pre-commit install
-make toolchain      # which OpenSCAD was found, its version and backend
-make test
-make stl            # -> out/*.stl
+cd scad-repo-template
 ```
-
-To read this documentation locally, run `make docs-serve` and open
-<http://127.0.0.1:8000>.
 
 ## Create a new project
 
