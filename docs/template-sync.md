@@ -54,6 +54,22 @@ Vendored libraries are compared, never changed: a submodule at a different commi
 the template's is reported, and bumping it stays a deliberate commit — see
 [Third-party libraries](development.md#third-party-libraries).
 
+## Keeping the sync out of a project's history
+
+`.template.toml` is committed with the project. To commit nothing of the sync's own, keep
+it in `.local/` instead, which the project's `.gitignore` ignores: the sync tool looks
+there when there is no `.template.toml` at the project's root, and uses the root's copy if
+both exist. For a project fresh from `new`, before its first commit:
+
+```bash
+git rm --cached -q .template.toml
+mkdir -p .local && mv .template.toml .local/
+```
+
+The file then lives only in that checkout. It holds the pin, which the tool can't sync
+without, so keep a copy: a fresh clone needs one in `.local/` before its first sync. Each
+`update` still moves the pin, but the change no longer shows in the project's diff.
+
 ## Taking a file over
 
 When a project's copy of a file needs to part ways with the template, change how that file

@@ -173,7 +173,8 @@ class Fixture:
         return commit_all(self.child, msg)
 
     def pin(self) -> str:
-        return tomllib.loads((self.child / ".template.toml").read_text())["template"]["commit"]
+        config = next(rel for rel in ts.CHILD_CONFIG_PATHS if (self.child / rel).is_file())
+        return tomllib.loads((self.child / config).read_text())["template"]["commit"]
 
 
 class UnitTests(unittest.TestCase):
@@ -769,8 +770,32 @@ class SyncTests(unittest.TestCase):
         (self.fx.child / ".template.toml").unlink()
         code, _out, err = self.fx.check()
         self.assertEqual(code, 2)
+        self.assertIn("no .template.toml or .local/.template.toml", err)
         self.assertIn("[template]", err)
         self.assertIn("project = ", err)
+
+    def test_config_in_local(self) -> None:
+        # Untracked in .local/, so the project's history holds nothing of the sync's.
+        write(self.fx.child, ".git/info/exclude", ".local/\n")  # the fixture's .gitignore doesn't
+        sh(self.fx.child, "git", "rm", "-q", "--cached", ".template.toml")
+        (self.fx.child / ".local").mkdir()
+        (self.fx.child / ".template.toml").rename(self.fx.child / ".local/.template.toml")
+        self.fx.child_commit("keep the config local")
+        self.add_lint_feature()
+        self.edit_template(".gitignore", "out/\n*.stl\n")
+        code, out, err = self.fx.update()
+        self.assertEqual(code, 0, err)
+        self.assertIn("recorded in .local/.template.toml: lint = false", out)
+        self.assertIs(tomllib.loads(self.read(".local/.template.toml"))["features"]["lint"], False)
+        self.assertEqual(self.fx.pin(), self.fx.head)
+        self.assertFalse(self.exists(".template.toml"))
+        self.assertEqual(sh(self.fx.child, "git", "status", "--porcelain").split(), ["M", ".gitignore"])
+
+    def test_root_config_wins_over_local(self) -> None:
+        write(self.fx.child, ".local/.template.toml", "not toml [\n")
+        code, out, err = self.fx.check()
+        self.assertEqual(code, 0, err)
+        self.assertIn("note: .local/.template.toml is not read: .template.toml takes precedence", out)
 
     def test_check_rejects_bad_config(self) -> None:
         self.edit_child(".template.toml", self.read(".template.toml").replace("holder = ", "holdr = "))

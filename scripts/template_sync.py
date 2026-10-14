@@ -9,8 +9,10 @@ Runs from a template checkout (the directory holding ``template.toml``) and
 acts on a child project given as an argument. Nothing here ships to children:
 a child carries only ``.template.toml`` -- which template it came from, the
 template commit it was last synced to, its token values, feature choices and
-per-file overrides. Standard library only, run through uv (the metadata above
-asks it for Python >= 3.11); git on PATH.
+per-file overrides. It is read from the child's root, or failing that from
+``.local/``, which children gitignore, so a child can keep even that out of its
+history. Standard library only, run through uv (the metadata above asks it for
+Python >= 3.11); git on PATH.
 
     uv run scripts/template_sync.py validate            # template self-check
     uv run scripts/template_sync.py new    ../child     # create a project
@@ -62,6 +64,9 @@ from pathlib import Path
 
 MANIFEST_NAME = "template.toml"
 CHILD_CONFIG_NAME = ".template.toml"
+# Where a child's config is looked for, first match wins. .local/ is gitignored
+# (*.local* in .gitignore), for a child that commits nothing of the sync's own.
+CHILD_CONFIG_PATHS = (CHILD_CONFIG_NAME, f".local/{CHILD_CONFIG_NAME}")
 # manifest_format history. A manifest declares the format of everything it uses,
 # so a tool too old for it stops at the number instead of misreading it. Every
 # older format stays readable: `check` and `update` parse the manifest as it was
@@ -600,6 +605,7 @@ NO_FEATURES_COMMENT = "# (the template declares no optional features)"
 @dataclass(frozen=True)
 class ChildConfig:
     root: Path
+    config: str  # the CHILD_CONFIG_PATHS entry it was read from
     url: str
     commit: str
     values: dict[str, str]
@@ -618,12 +624,13 @@ def child_config_skeleton(manifest: Manifest) -> str:
 
 
 def load_child_config(root: Path, manifest: Manifest) -> ChildConfig:
-    path = root / CHILD_CONFIG_NAME
-    if not path.is_file():
+    config = next((rel for rel in CHILD_CONFIG_PATHS if (root / rel).is_file()), None)
+    if config is None:
         raise ConfigError(
-            f"{path}: not found. Was this project created with `template_sync.py new`? "
+            f"{root}: no {' or '.join(CHILD_CONFIG_PATHS)}. Was this project created with `template_sync.py new`? "
             f"If not, write one by hand:\n\n{child_config_skeleton(manifest)}"
         )
+    path = root / config
     try:
         raw = tomllib.loads(path.read_text("utf-8"))
     except tomllib.TOMLDecodeError as e:
@@ -654,7 +661,7 @@ def load_child_config(root: Path, manifest: Manifest) -> ChildConfig:
     for p, s in overrides.items():
         if s not in CHILD_STRATEGIES:
             raise ConfigError(f"{w}: [overrides] {p!r} = {s!r}; expected one of {', '.join(CHILD_STRATEGIES)}")
-    return ChildConfig(root, url, commit, dict(values), dict(features), dict(overrides))
+    return ChildConfig(root, config, url, commit, dict(values), dict(features), dict(overrides))
 
 
 def toml_str(s: str) -> str:
@@ -747,7 +754,7 @@ def record_new_features(manifest: Manifest, cfg: ChildConfig, *, yes: bool) -> C
     chosen = resolve_features(manifest, cfg.features, yes=yes, intro="The template has options this project hasn't chosen yet:")
     choices = {name: chosen.get(name, manifest.features[name].default) for name in undecided}
     summary = ", ".join(f"{name} = {'true' if on else 'false'}" for name, on in choices.items())
-    path = cfg.root / CHILD_CONFIG_NAME
+    path = cfg.root / cfg.config
     text = with_feature_choices(path.read_text("utf-8"), manifest.features, choices)
     try:
         recorded = tomllib.loads(text).get("features", {})
@@ -756,7 +763,7 @@ def record_new_features(manifest: Manifest, cfg: ChildConfig, *, yes: bool) -> C
     if any(recorded.get(name) != on for name, on in choices.items()):
         raise ConfigError(f"{path}: could not add to [features]; add these by hand, then rerun: {summary}")
     path.write_text(text, "utf-8")
-    print(f"recorded in {CHILD_CONFIG_NAME}: {summary}")
+    print(f"recorded in {cfg.config}: {summary}")
     return load_child_config(cfg.root, manifest)
 
 
@@ -931,13 +938,16 @@ def build_plan(manifest: Manifest, cfg: ChildConfig, *, include_seed: bool) -> S
     head = head_commit(root)
     if not commit_exists(root, cfg.commit):
         raise ConfigError(
-            f"{CHILD_CONFIG_NAME}: pinned template commit {cfg.commit} is not in {root} "
+            f"{cfg.config}: pinned template commit {cfg.commit} is not in {root} "
             "(shallow clone, rewritten history, or the wrong template?)"
         )
     pin = git_out(root, "rev-parse", f"{cfg.commit}^{{commit}}")
     behind = int(git_out(root, "rev-list", "--count", f"{pin}..{head}")) if is_ancestor(root, pin, head) else None
 
     enabled, notes = effective_features(manifest, cfg.features)
+    for rel in CHILD_CONFIG_PATHS:
+        if rel != cfg.config and (cfg.root / rel).is_file():
+            notes.append(f"{rel} is not read: {cfg.config} takes precedence")
     for name, f in manifest.features.items():
         if name not in cfg.features:
             notes.append(
@@ -1175,7 +1185,7 @@ def cmd_update(args: argparse.Namespace, root: Path) -> int:
             write_result(child_root, r)
             applied += 1
     if plan.head != plan.pin:
-        bump_pin(child_root / CHILD_CONFIG_NAME, plan.head)
+        bump_pin(child_root / cfg.config, plan.head)
     print_plan(plan, show_all=args.all)
     conflicts = [r for r in plan.results if r.status == "conflict"]
     pin_note = f"; pin {plan.pin[:7]} -> {plan.head[:7]}" if plan.head != plan.pin else ""
