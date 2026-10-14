@@ -39,8 +39,8 @@ Replace them.
 | `AGENTS.md` | Instructions for coding agents working in the repository. |
 | `.template.toml` | Only in a project created from the template: the template commit the project was last synced with, and its sync settings — see [Syncing with the template](template-sync.md). |
 
-Alongside these sit `README.md`, `LICENSE`, `CLAUDE.md`, `.gitignore`, `.gitmodules` (the
-submodule URLs), and a VS Code workspace file.
+Alongside these sit `README.md`, `LICENSE`, `CLAUDE.md`, `.gitignore`, and `.gitmodules`
+(the submodule URLs).
 
 A project gets the documentation site — the pages in `docs/`, `mkdocs.yml`,
 `pyproject.toml` and `uv.lock`, `make docs` and the `docs.yml` workflow — only if it asks for one when it is created; otherwise its

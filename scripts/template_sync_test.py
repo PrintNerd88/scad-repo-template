@@ -92,7 +92,7 @@ exclude = ["template.toml", "tool/**", "GUIDE.md"]
 [base]
 managed = [".gitignore", ".gitmodules", "ci.yml"]
 merge = ["Makefile", "child/GUIDE.md", "NOTES.md"]
-seed = ["README.md", "LICENSE", "src/*.scad", "demo-template.code-workspace", "logo.png"]
+seed = ["README.md", "LICENSE", "src/*.scad", "demo-template.txt", "logo.png"]
 
 [features.docs]
 description = "docs site"
@@ -123,7 +123,7 @@ FILES = {
     "README.md": "# demo-template\n\nSee `<template-only>` for how markers work.\n",
     "LICENSE": "Copyright <HOLDER>\n",
     "src/part.scad": "cube(1);\n",
-    "demo-template.code-workspace": "{}\n",
+    "demo-template.txt": "{}\n",
     "docs.yml": 'docs: true\n# <template-only feature="docs_extra">\nextra: true\n# </template-only>\n',
     "docs/index.md": "# docs\n",
     "docs/extra.md": "extra\n",
@@ -466,10 +466,10 @@ class SyncTests(unittest.TestCase):
 
     def test_new_layout(self) -> None:
         for rel in (".gitignore", "ci.yml", "Makefile", "NOTES.md", "README.md", "LICENSE", "src/part.scad",
-                    "widget.code-workspace", "docs.yml", "docs/index.md", "docs/extra.md", "logo.png", ".template.toml",
+                    "widget.txt", "docs.yml", "docs/index.md", "docs/extra.md", "logo.png", ".template.toml",
                     "GUIDE.md"):
             self.assertTrue(self.exists(rel), rel)
-        for rel in ("template.toml", "tool/sync.py", "tool", "demo-template.code-workspace", "child"):
+        for rel in ("template.toml", "tool/sync.py", "tool", "demo-template.txt", "child"):
             self.assertFalse(self.exists(rel), rel)
         self.assertEqual(self.read("GUIDE.md"), "# guide\nsee docs\n")
         self.assertEqual(self.read("ci.yml"), "name: ci\nrun: make\n")
@@ -492,7 +492,7 @@ class SyncTests(unittest.TestCase):
         self.assertIn("nothing is committed", out)
         staged = sh(fx.child, "git", "diff", "--cached", "--name-only").split()
         self.assertIn(".template.toml", staged)
-        self.assertIn("widget.code-workspace", staged)
+        self.assertIn("widget.txt", staged)
 
     def test_new_refuses_nonempty_target(self) -> None:
         code, _out, err = self.fx.new()

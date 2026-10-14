@@ -35,8 +35,7 @@ It asks for each value and option below, then:
    the template's own README and documentation: a project gets the generic README in
    `child/` instead, and, if it takes the documentation site, the generic pages in
    `child/docs/`;
-2. replaces the template's name and the `LICENSE` placeholder with your values, in file
-   contents and file names;
+2. replaces the template's name and the `LICENSE` placeholder with your values;
 3. removes template-only sections, and the sections for options you didn't take;
 4. runs `git init` on a `main` branch and adds each `vendor/` submodule at the commit
    the template pins;
@@ -46,7 +45,7 @@ It asks for each value and option below, then:
 
 | Value | Replaces | Default |
 |---|---|---|
-| `project` | `scad-repo-template`: the README and documentation titles, the site name, the workspace file name | The new directory's name |
+| `project` | `scad-repo-template`: the README and documentation titles, the site name, the `pyproject.toml` project name | The new directory's name |
 | `copyright_holder` | `<COPYRIGHT HOLDER>` in `LICENSE` | Left as the placeholder |
 
 | Option | Adds | Default |

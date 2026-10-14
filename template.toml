@@ -54,7 +54,6 @@ seed = [
   "child/README.md",          # generic, for each project to rewrite
   "docs/preview.png",         # the README's image, so shipped with or without docs
   "src/lib/common.scad",
-  "scad-repo-template.code-workspace",
   "scripts/.gitkeep",
   "src/*.scad",
   "tests/common.scad",
