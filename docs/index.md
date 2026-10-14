@@ -34,6 +34,7 @@ Replace them.
 | `.github/workflows/` | CI. `render.yml` tests and renders on both OpenSCAD toolchains; `docs.yml` builds this site and publishes it to GitHub Pages. |
 | `Makefile` | Every build, test and documentation command — see [Development](development.md). |
 | `mkdocs.yml` | Documentation site settings and page order. |
+| `pyproject.toml`, `uv.lock` | The documentation toolchain: MkDocs and its theme, locked to exact versions. |
 | `.pre-commit-config.yaml` | The checks run before every commit. |
 | `AGENTS.md` | Instructions for coding agents working in the repository. |
 | `.template.toml` | Only in a project created from the template: the template commit the project was last synced with, and its sync settings — see [Syncing with the template](template-sync.md). |
@@ -41,8 +42,8 @@ Replace them.
 Alongside these sit `README.md`, `LICENSE`, `CLAUDE.md`, `.gitignore`, `.gitmodules` (the
 submodule URLs), and a VS Code workspace file.
 
-A project gets the documentation site — the pages in `docs/`, `mkdocs.yml`, `make docs`
-and the `docs.yml` workflow — only if it asks for one when it is created; otherwise its
+A project gets the documentation site — the pages in `docs/`, `mkdocs.yml`,
+`pyproject.toml` and `uv.lock`, `make docs` and the `docs.yml` workflow — only if it asks for one when it is created; otherwise its
 README is its documentation. Either way, it starts from generic pages, not these.
 
 The template itself has more files that never reach a project as they are:
@@ -63,7 +64,7 @@ by double-clicking the file.
 | [GNU Make](https://www.gnu.org/software/make/) | The one entry point for rendering, testing and building the docs. It picks which OpenSCAD to run and works around OpenSCAD's quirks — such as a failed `assert()` still exiting 0. |
 | [Git](https://git-scm.com/) | Version control, with submodules pinning each vendored library to an exact commit. |
 | [Python](https://www.python.org/) | The language of the tooling, never of the parts: pre-commit, MkDocs, and the template sync tool. |
-| [uv](https://docs.astral.sh/uv/) | Installs and runs every Python tool, along with the Python version it needs, so nothing is installed into the repository. |
+| [uv](https://docs.astral.sh/uv/) | Installs and runs every Python tool, along with the Python version it needs. The documentation toolchain is declared in `pyproject.toml` and locked in `uv.lock`. |
 | [pre-commit](https://pre-commit.com/) | Checks every commit: fixes trailing whitespace and final newlines, rejects files over 500 KB (usually an STL committed by accident), checks JSON files parse, scans for credentials with [detect-secrets](https://github.com/Yelp/detect-secrets), and evaluates each changed `.scad` file with OpenSCAD. |
 | [MkDocs](https://www.mkdocs.org/) with [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) | Builds this site from the Markdown in `docs/`, and a project's site if it has one. `make docs` runs pinned versions of both through uv. |
 | [GitHub Actions](https://docs.github.com/en/actions) | CI: tests and renders every push on both OpenSCAD toolchains, uploads the renders, and builds the documentation. |

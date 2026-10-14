@@ -37,10 +37,6 @@ nav:
   - Syncing with the template: template-sync.md
   # </template-only>
 
-# A build input, not a page.
-exclude_docs: |
-  requirements.txt
-
 # `make docs` builds with --strict, which turns each of these warnings into an
 # error.
 validation:

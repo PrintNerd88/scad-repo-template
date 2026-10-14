@@ -126,8 +126,10 @@ This site is the Markdown in `docs/`, built by MkDocs with the Material theme. P
 is the `nav` list in `mkdocs.yml`; add new pages there.
 
 `make docs` builds with `--strict`, so a broken link, a missing heading anchor, or a page
-left out of `nav` fails the build. uv runs the MkDocs and theme versions pinned in
-`docs/requirements.txt`, so nothing is installed into the repository.
+left out of `nav` fails the build. uv runs MkDocs and the theme from the `docs`
+dependency group in `pyproject.toml`, at the versions locked in `uv.lock`, installing
+them into `.venv/`. To bump them, run `uv lock --upgrade`, then check that `make docs`
+still passes.
 
 The `docs` workflow builds the site on every push and pull request, and publishes it to
 GitHub Pages from `main`. Once the repository is on GitHub, publishing needs two one-time

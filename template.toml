@@ -72,7 +72,8 @@ description = "an MkDocs site, published to GitHub Pages; otherwise the README i
 default = false
 managed = [
   ".github/workflows/docs.yml",
-  "docs/requirements.txt",
+  "pyproject.toml",           # the MkDocs toolchain
+  "uv.lock",
 ]
 merge = [
   "mkdocs.yml",               # projects add pages to nav

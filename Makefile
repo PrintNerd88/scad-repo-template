@@ -117,10 +117,10 @@ endif
 # ---------------------------------------------------------------------------
 # Documentation
 #
-# uv runs MkDocs and its theme at the versions pinned in docs/requirements.txt,
-# in a cached environment outside the repository.
+# uv runs MkDocs and its theme from the docs dependency group in pyproject.toml,
+# at the versions locked in uv.lock, in .venv/.
 # ---------------------------------------------------------------------------
-MKDOCS := uv run --no-project --with-requirements docs/requirements.txt mkdocs
+MKDOCS := uv run --group docs mkdocs
 
 .PHONY: docs docs-serve
 docs:

@@ -19,10 +19,12 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-          cache-dependency-glob: docs/requirements.txt
 
-      # The same entry point as locally: uv runs the pinned MkDocs with --strict.
+      # The same entry point as locally: uv runs the locked MkDocs with --strict.
+      # UV_LOCKED fails the build if uv.lock is out of date with pyproject.toml.
       - run: make docs
+        env:
+          UV_LOCKED: 1
 
       - if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v5

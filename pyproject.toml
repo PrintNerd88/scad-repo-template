@@ -1,0 +1,17 @@
+# The documentation toolchain. Nothing here is a Python package or is ever
+# built: uv installs only the dependency groups, into .venv/, at the exact
+# versions in uv.lock, so every build produces the same site.
+[project]
+name = "scad-repo-template"
+version = "0.0.0"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+# `make docs` runs MkDocs from this group, locally and in the docs workflow
+# alike. Bump deliberately with `uv lock --upgrade`, and check that `make docs`
+# still passes.
+docs = [
+  "mkdocs>=1.6.1",
+  "mkdocs-material>=9.7.7",
+]
