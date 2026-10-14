@@ -24,4 +24,9 @@
 
 ## Commits
 
-Use Conventional Commits.
+- Never commit on main. If on main, ask the user where to commit.
+- Use: https://www.conventionalcommits.org
+- Write proposed commit messages to a file in .local/, open the file in the code
+  editor, wait for user approval before committing. Re-read the file after
+  approval in case the user changed anything.
+- Always push to origin after committing.
