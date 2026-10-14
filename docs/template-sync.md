@@ -75,28 +75,3 @@ without, so keep a copy: a fresh clone needs one in `.local/` before its first s
 When a project's copy of a file needs to part ways with the template, change how that file
 is synced under `[overrides]` in `.template.toml`: `merge` to keep local edits to a file
 the template owns, or `ignore` to stop syncing it altogether. The file has examples.
-
-## Maintaining the template
-
-A change to the template reaches every project at its next sync, so deciding how a file
-is shared is part of adding it. `template.toml` gives each tracked file a strategy or keeps
-it out of projects, and `make template-validate` fails on any file it doesn't cover.
-
-The template is a working project too, and some of it is for the template alone: its
-README and this site, the sync tool, the `template-*` make targets. Excluded files,
-template-only sections marked in comments, and the generic stand-ins under `child/` keep
-all of that out of projects. The rules for each — markers, tokens, `child/`, and when to
-bump the manifest format — are in the comments of `template.toml` and
-`scripts/template_sync.py`.
-
-To see what a change does to projects, create a throwaway project before making it, then
-check that project as you go:
-
-```bash
-make template-new CHILD=../scratch ARGS=-y    # before the change
-make template-check CHILD=../scratch          # what projects would receive
-make template-validate                        # every file classified, markers balanced
-make template-test                            # the sync tool's tests
-```
-
-CI runs the last two on every push.
