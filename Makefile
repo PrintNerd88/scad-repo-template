@@ -40,18 +40,19 @@ MANIFOLD := $(if $(strip $(OPENSCAD)),\
               $(shell $(OPENSCAD) --help 2>&1 | grep -q -- '--backend' && echo --backend=manifold))
 FLAGS    ?= $(MANIFOLD) --export-format=binstl
 
-# Every file in src/ is a part, rendered to out/<name>.stl, except two.
+# Every file directly in src/ is a part, rendered to out/<name>.stl, except two.
 # params.scad holds the parts' measurements and draws nothing, so it gets no
 # STL and no PNG. assembly.scad places the parts together to check how they
 # fit, and is never printed, so it gets a preview and a check in `make test`,
-# but no STL. Either may be missing.
+# but no STL. Either may be missing. src/lib/ is not searched for parts: it
+# holds the definitions they share, so everything built depends on it.
 PARAMS   := $(wildcard src/params.scad)
 ASSEMBLY := $(wildcard src/assembly.scad)
 PARTS    := $(patsubst src/%.scad,%,$(filter-out $(PARAMS) $(ASSEMBLY),$(wildcard src/*.scad)))
 STLS     := $(addprefix out/,$(addsuffix .stl,$(PARTS)))
 PNGS     := $(addprefix out/,$(addsuffix .png,$(PARTS)))
 TESTS    := $(wildcard tests/*.scad)
-DEPS     := $(wildcard lib/*.scad)
+DEPS     := $(wildcard src/lib/*.scad)
 
 .PHONY: all stl png test clean help toolchain
 all: stl

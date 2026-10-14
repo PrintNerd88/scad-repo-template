@@ -21,12 +21,12 @@ Replace them.
 
 | Path | Holds |
 |---|---|
-| `src/` | Printable parts, one `.scad` file per STL. Each has a single top-level call at the bottom, so it renders on its own and other files can `use` it. |
+| `src/` | All the project's own OpenSCAD source. Each `.scad` file directly in it is a printable part, one per STL, with a single top-level call at the bottom, so it renders on its own and other files can `use` it. |
 | `src/params.scad` | Every measurement of the parts, which each part includes, so they always fit each other. Not a part: it draws nothing. See [Parts, measurements and the assembly](development.md#parts-measurements-and-the-assembly). |
 | `src/assembly.scad` | The parts placed together, to check how they fit. Never printed — `make png` previews it and `make test` checks it still evaluates. |
-| `lib/` | Project-local modules and functions. Definitions only — no top-level geometry, no reliance on globals — so any file can `use <>` them safely. |
+| `src/lib/` | Project-local modules and functions. Definitions only — no top-level geometry, no reliance on globals — so any file can `use <>` them safely. Not parts: nothing in it is rendered. |
 | `vendor/` | Third-party libraries as git submodules, pinned to exact commits and never edited. BOSL2 is included. |
-| `tests/` | `.scad` files that `assert()` on the functions in `lib/`, run headlessly by `make test`. |
+| `tests/` | `.scad` files that `assert()` on the functions in `src/lib/`, run headlessly by `make test`. |
 | `docs/` | This documentation, and the images the README uses. |
 | `scripts/` | Helper scripts, for whatever the Makefile can't reasonably do. |
 | `out/` | Rendered STLs, PNGs and test logs. Gitignored — attach release files to GitHub releases instead. |
@@ -50,7 +50,7 @@ The template itself has more files that never reach a project as they are:
 `scripts/template_sync.py` and its tests; its own `README.md` and the pages of this
 site; and `child/`, the generic README and documentation pages a project gets instead.
 
-A part in `src/` pulls in modules from `lib/` and `vendor/` by relative path, never
+A part in `src/` pulls in modules from `src/lib/` and `vendor/` by relative path, never
 through `OPENSCADPATH`, so every checkout renders the same way — from `make`, in CI, or
 by double-clicking the file.
 

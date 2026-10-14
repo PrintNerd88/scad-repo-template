@@ -20,7 +20,7 @@ module __Customizer_Limit__ () {}
 
 include <../vendor/BOSL2/std.scad>
 include <params.scad>
-use <../lib/common.scad>
+use <lib/common.scad>
 
 // The cap, as it sits on the boss: open end down, its inside resting on the
 // top of the boss at Z=0.

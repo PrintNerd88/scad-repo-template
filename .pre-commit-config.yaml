@@ -19,7 +19,7 @@ repos:
         name: openscad syntax check
         # A full render is the only syntax check OpenSCAD offers, so this is
         # slow on large parts. If that bites, narrow to:
-        #   files: '^(lib|tests)/.*\.scad$'
+        #   files: '^(src/lib|tests)/.*\.scad$'
         # and let CI cover src/.
         entry: bash -c 'for f in "$@"; do openscad --export-format=echo -o /dev/null "$f" || exit 1; done' --
         language: system

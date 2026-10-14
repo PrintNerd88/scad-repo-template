@@ -3,7 +3,7 @@
 ## Rules
 
 - Put each part in its own file in `src/`.
-- `lib/` files contain definitions only, take every input as a parameter, and read no
+- `src/lib/` files contain definitions only, take every input as a parameter, and read no
   globals; never add top-level geometry there.
 - Relative imports only; never `OPENSCADPATH`.
 - Prefer `$fa`/`$fs` over a global `$fn`. `$fn` on a single small feature is fine.

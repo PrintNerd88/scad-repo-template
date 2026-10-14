@@ -49,7 +49,7 @@ boss_style   = "round";   // [round, hex]
 // ---------------------------------------------------------------------------
 
 /* [Cap] */
-// Clearance round the boss, as lib/common.scad's clearance() adds it. If the
+// Clearance round the boss, as src/lib/common.scad's clearance() adds it. If the
 // cap is loose, go tighter; if it won't go on, looser.
 cap_fit      = "normal";  // [tight, normal, loose]
 cap_wall     = 2;         // [0.8:0.2:5]  side wall

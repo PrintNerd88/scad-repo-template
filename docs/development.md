@@ -81,7 +81,7 @@ toolchains.
 
 ## Tests
 
-`tests/*.scad` assert on the functions in `lib/`. Test functions, not geometry — there is
+`tests/*.scad` assert on the functions in `src/lib/`. Test functions, not geometry — there is
 no good automated STL diff in the standard toolchain. For geometry regressions, CI
 renders PNGs on every push and uploads them with the STLs; compare them by eye in the
 pull request.
@@ -99,7 +99,7 @@ committed by accident), check that JSON files parse, scan for credentials, and
 evaluate every changed `.scad` file outside `vendor/` with OpenSCAD.
 
 That last check is a full render, which gets slow on large parts;
-`.pre-commit-config.yaml` shows how to narrow it to `lib/` and `tests/`.
+`.pre-commit-config.yaml` shows how to narrow it to `src/lib/` and `tests/`.
 
 ## Third-party libraries
 

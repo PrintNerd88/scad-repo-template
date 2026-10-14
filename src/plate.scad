@@ -33,7 +33,7 @@ module __Customizer_Limit__ () {}
 //    - include <> : textual paste — needed for BOSL2 (it defines constants
 //      like TOP/BOTTOM/CENTER and $-variables that `use` would not export),
 //      and for params.scad, whose variables `use` would not import either.
-//    - use <>     : definitions only — correct for your own lib/ files, as
+//    - use <>     : definitions only — correct for your own src/lib/ files, as
 //      cap.scad does.
 //    - Relative paths, never OPENSCADPATH.
 // ---------------------------------------------------------------------------

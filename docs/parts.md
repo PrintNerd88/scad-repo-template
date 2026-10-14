@@ -38,7 +38,7 @@ Fill in per part: material, layer height, orientation, supports, infill.
 ## `cap.scad` — boss cap
 
 A cup that fits over the plate's boss: round or hexagonal inside, as the boss is, with
-clearance all round from `clearance()` in `lib/common.scad`. It reads the boss's
+clearance all round from `clearance()` in `src/lib/common.scad`. It reads the boss's
 measurements from `params.scad`, so it follows any change to the boss. It refuses to
 render if `cap_depth` would reach down to the plate.
 
