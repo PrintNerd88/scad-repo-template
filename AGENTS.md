@@ -2,17 +2,14 @@
 
 ## Rules
 
-- `src/lib/` files contain definitions only, take every input as a parameter, and read no
-  globals; never add top-level geometry there.
-- Relative imports only; never `OPENSCADPATH`.
-- Prefer `$fa`/`$fs` over a global `$fn`. `$fn` on a single small feature is fine.
-- One top-level call at the bottom of a part file, wrapped in a module.
-- Run `make test` and `make stl` before proposing changes; do not commit anything under `out/`.
+- `src/lib/` is for common files. Parts should live in `src`
+- Do not edit `vendor/`.
 - Keep the documentation in step with the code: a change to documented behaviour updates it in
   the same commit.
-- Do not hardcode `openscad-nightly` or `openscad` — use `$(OPENSCAD)` in the Makefile and
-  `make toolchain` to check what resolved. Changes must keep working on both.
-- Do not edit `vendor/`.
+- Measurements belong only in the parameters: their values and Customizer range annotations.
+  Do not repeat them in the README, comments, `echo()` literals or commit messages.
+- Do not describe complex shapes in detailed prose; nobody can picture them from words. Show a
+  render instead.
 
 ## Commits
 
