@@ -15,6 +15,7 @@ site/
 # Local scratch / secrets
 *.local*
 *.env*
+!.env.example
 
 # code editor artifacts
 *.code-workspace
