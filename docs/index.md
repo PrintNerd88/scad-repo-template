@@ -10,12 +10,9 @@ nightly and stable toolchains, a README, and optionally a documentation site bui
 MkDocs for GitHub Pages. Projects created from the template can pull in its later
 changes with a small sync tool.
 
-The included parts are a demo — a parametric mounting plate, annotated section by
-section with the convention it illustrates, and a cap that fits over its boss — with the
-measurements they share in one file and an assembly that seats the cap on the plate.
-Replace them.
-
-![Rendered preview of the demo mounting plate](preview.png)
+The parts in `src/` are a placeholder demo: they give the build, the tests and CI
+something to run from the first commit, and `src/plate.scad` is annotated with the
+conventions to follow. [Replace them](getting-started.md#first-steps-in-a-new-project).
 
 ## Repository shape
 
@@ -27,7 +24,7 @@ Replace them.
 | `src/lib/` | Project-local modules and functions. Definitions only — no top-level geometry, no reliance on globals — so any file can `use <>` them safely. Not parts: nothing in it is rendered. |
 | `vendor/` | Third-party libraries as git submodules, pinned to exact commits and never edited. BOSL2 is included. |
 | `tests/` | `.scad` files that `assert()` on the functions in `src/lib/`, run headlessly by `make test`. |
-| `docs/` | This documentation, and the images the README uses. |
+| `docs/` | This documentation, and any images the README uses. |
 | `scripts/` | Helper scripts, for whatever the Makefile can't reasonably do. |
 | `out/` | Rendered STLs, PNGs and test logs. Gitignored — attach release files to GitHub releases instead. |
 | `site/` | The built documentation site. Gitignored. |
@@ -48,9 +45,8 @@ README is its documentation. Either way, it starts from generic pages, not these
 
 The template itself has more files that never reach a project as they are:
 `template.toml`, which says how each file is kept in sync; the sync tool
-`scripts/template_sync.py` and its tests; its own `README.md`, preview image and the pages
-of this site; and `child/`, the generic README and documentation pages a project gets
-instead.
+`scripts/template_sync.py` and its tests; its own `README.md` and the pages of this site;
+and `child/`, the generic README and documentation pages a project gets instead.
 
 A part in `src/` pulls in modules from `src/lib/` and `vendor/` by relative path, never
 through `OPENSCADPATH`, so every checkout renders the same way — from `make`, in CI, or
@@ -61,7 +57,7 @@ by double-clicking the file.
 | Tool | What it does here |
 |---|---|
 | [OpenSCAD](https://openscad.org/) | Renders the parts. The Makefile prefers `openscad-nightly`, whose manifold backend is far faster on CSG-heavy parts, and falls back to a stable `openscad`. CI builds with both. |
-| [BOSL2](https://github.com/BelfrySCAD/BOSL2) | A widely used OpenSCAD library of shapes, attachments, rounding and threading. Vendored as a submodule; the demo part uses it. |
+| [BOSL2](https://github.com/BelfrySCAD/BOSL2) | A widely used OpenSCAD library of shapes, attachments, rounding and threading. Vendored as a submodule. |
 | [GNU Make](https://www.gnu.org/software/make/) | The one entry point for rendering, testing and building the docs. It picks which OpenSCAD to run and works around OpenSCAD's quirks — such as a failed `assert()` still exiting 0. |
 | [Git](https://git-scm.com/) | Version control, with submodules pinning each vendored library to an exact commit. |
 | [Python](https://www.python.org/) | The language of the tooling, never of the parts: pre-commit, MkDocs, and the template sync tool. |
@@ -78,7 +74,6 @@ by double-clicking the file.
 - [Getting started](getting-started.md) — requirements, installation, and setting up a
   new project.
 - [Development](development.md) — building, variants, tests, pre-commit hooks, vendored
-  libraries, the documentation site, and releases.
-- [Parts](parts.md) — what each part is, its parameters, and how to print it.
+  libraries, the documentation site, releases, and maintaining the template.
 - [Syncing with the template](template-sync.md) — checking a project against the
   template and pulling in its changes.

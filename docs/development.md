@@ -63,16 +63,16 @@ To build a part with different measurements, override them with `-D`. String val
 need their quotes:
 
 ```bash
-openscad -D 'plate_length=120' -D 'hole_size="M5"' -o out/plate-long.stl src/plate.scad
+openscad -D '<name>=<number>' -D '<name>="<string>"' -o out/<part>-<variant>.stl src/<part>.scad
 ```
 
 Add an explicit Makefile target for each variant you want built, rather than
 generalising the pattern rule:
 
 ```make
-stl: out/plate-long.stl
-out/plate-long.stl: src/plate.scad src/params.scad $(DEPS) | out
-	$(OPENSCAD) $(FLAGS) -D 'plate_length=120' -o $@ $<
+stl: out/<part>-<variant>.stl
+out/<part>-<variant>.stl: src/<part>.scad src/params.scad $(DEPS) | out
+	$(OPENSCAD) $(FLAGS) -D '<name>=<number>' -o $@ $<
 ```
 
 The Customizer's JSON presets don't work here: on the nightly, a preset only reaches
@@ -118,8 +118,6 @@ git submodule update --remote vendor/BOSL2
 git commit -am "build(vendor): bump BOSL2"
 ```
 
-`vendor/` is never edited by hand.
-
 ## Documentation
 
 This site is the Markdown in `docs/`, built by MkDocs with the Material theme. Page order
@@ -147,3 +145,18 @@ starts from generic pages rather than these.
 
 `out/` is gitignored. Attach STLs to a GitHub release from a tag-triggered job instead of
 committing binaries.
+
+## Maintaining the template
+
+These targets exist only in the template, so `make help` leaves them out. They need uv and
+git, not OpenSCAD.
+
+| Command | Result |
+|---|---|
+| `make template-validate` | Checks that `template.toml` classifies every tracked file, and that the markers in shipped files are well formed |
+| `make template-test` | Runs the sync tool's tests, including building real projects from this template |
+| `make template-new CHILD=<path>` | Creates a project at `<path>` |
+| `make template-check CHILD=<path>` | Reports the project's drift and pending updates |
+| `make template-update CHILD=<path>` | Applies the template's changes to the project |
+
+Flags for the sync tool go in `ARGS`, as in `ARGS='--set project=<name> -y'`.

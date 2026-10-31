@@ -18,7 +18,6 @@
 //    - OpenSCAD's Customizer panel, and its JSON presets, only reach the
 //      opened file's own parameters, never these from a part that includes
 //      them. The format still says what each one is and the values it takes.
-//      For a variant, override them with -D (see AGENTS.md).
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------

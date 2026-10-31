@@ -21,7 +21,6 @@ exclude = [
   "scripts/template_sync_test.py",
   "README.md",                # the template's own README and documentation site;
   "docs/*.md",                # children get the generic ones in child/ instead
-  "docs/preview.png",         # a render of the demo, for the template's own README
 ]
 
 # Literal in this repo -> key in a child's .template.toml [values]. Substituted in

@@ -32,9 +32,9 @@ uv run scripts/template_sync.py new ../myproject
 It asks for each value and option below, then:
 
 1. copies every file a project gets. That leaves out `template.toml`, the sync tool, and
-   the template's own README, documentation and preview image: a project gets the generic
-   README in `child/` instead, and, if it takes the documentation site, the generic pages
-   in `child/docs/`;
+   the template's own README and documentation: a project gets the generic README in
+   `child/` instead, and, if it takes the documentation site, the generic pages in
+   `child/docs/`;
 2. replaces the template's name and the `LICENSE` placeholder with your values;
 3. removes template-only sections, and the sections for options you didn't take;
 4. runs `git init` on a `main` branch and adds each `vendor/` submodule at the commit

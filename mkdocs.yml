@@ -33,7 +33,6 @@ nav:
   - Getting started: getting-started.md
   - Development: development.md
   # <template-only>
-  - Parts: parts.md
   - Syncing with the template: template-sync.md
   # </template-only>
 
