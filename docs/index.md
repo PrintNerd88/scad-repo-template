@@ -37,7 +37,7 @@ Replace them.
 | `pyproject.toml`, `uv.lock` | The documentation toolchain: MkDocs and its theme, locked to exact versions. |
 | `.pre-commit-config.yaml` | The checks run before every commit. |
 | `AGENTS.md` | Instructions for coding agents working in the repository. |
-| `.template.toml` | Only in a project created from the template: the template commit the project was last synced with, and its sync settings — see [Syncing with the template](template-sync.md). |
+| `.template.toml` | Only in a project created from the template: the template commit the project was last synced with, its sync settings, and the commands to run a sync — see [Syncing with the template](template-sync.md). |
 
 Alongside these sit `README.md`, `LICENSE`, `CLAUDE.md`, `.gitignore`, and `.gitmodules`
 (the submodule URLs).
@@ -48,8 +48,9 @@ README is its documentation. Either way, it starts from generic pages, not these
 
 The template itself has more files that never reach a project as they are:
 `template.toml`, which says how each file is kept in sync; the sync tool
-`scripts/template_sync.py` and its tests; its own `README.md` and the pages of this
-site; and `child/`, the generic README and documentation pages a project gets instead.
+`scripts/template_sync.py` and its tests; its own `README.md`, preview image and the pages
+of this site; and `child/`, the generic README and documentation pages a project gets
+instead.
 
 A part in `src/` pulls in modules from `src/lib/` and `vendor/` by relative path, never
 through `OPENSCADPATH`, so every checkout renders the same way — from `make`, in CI, or

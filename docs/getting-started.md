@@ -4,7 +4,7 @@
 
 - **OpenSCAD nightly**: `sudo snap install openscad-nightly`, or the development
   snapshot from <https://openscad.org/downloads.html> on other platforms. Its manifold
-  backend renders the benchmark part in 0.33 s, against 33 s under CGAL.
+  backend renders CSG-heavy parts much faster than CGAL.
 - **make** and **git**.
 - **uv**, which installs and runs all the Python tooling:
   <https://docs.astral.sh/uv/getting-started/installation/>.
@@ -32,9 +32,9 @@ uv run scripts/template_sync.py new ../myproject
 It asks for each value and option below, then:
 
 1. copies every file a project gets. That leaves out `template.toml`, the sync tool, and
-   the template's own README and documentation: a project gets the generic README in
-   `child/` instead, and, if it takes the documentation site, the generic pages in
-   `child/docs/`;
+   the template's own README, documentation and preview image: a project gets the generic
+   README in `child/` instead, and, if it takes the documentation site, the generic pages
+   in `child/docs/`;
 2. replaces the template's name and the `LICENSE` placeholder with your values;
 3. removes template-only sections, and the sections for options you didn't take;
 4. runs `git init` on a `main` branch and adds each `vendor/` submodule at the commit
@@ -61,6 +61,11 @@ hand. Keeping the project up to date afterwards is covered in
 
 ## First steps in a new project
 
+Nothing in a new project mentions the template or the demo, apart from `.template.toml`
+and the demo parts: `src/plate.scad`, `src/cap.scad`, `src/params.scad` and
+`src/assembly.scad`. Delete those and you have a blank slate, with the build system and
+its documentation still in place.
+
 1. Review `git status`, then make the first commit with a Conventional Commits message.
 2. `pre-commit install`.
 3. Confirm the toolchain: `make toolchain`, then `make test` and `make stl`.
@@ -69,10 +74,8 @@ hand. Keeping the project up to date afterwards is covered in
    `src/plate.scad` and `src/cap.scad` with one file per part. Then either rewrite
    `src/assembly.scad` to place your own parts, or, for a single-part project, delete
    it; nothing else refers to it.
-6. Rewrite `README.md` and, with the documentation site, the pages in `docs/`. They start
-   out generic: a placeholder where the project's description goes, and the demo parts in
-   the parts table.
-7. Replace `docs/preview.png`: `make png && cp out/<part>.png docs/preview.png`.
-8. Check the copyright holder in `LICENSE`.
-9. With the documentation site, publish it: see
+6. Fill in the placeholders in `README.md` and, with the documentation site, the pages in
+   `docs/`: `git grep -n FIXME` lists them.
+7. Check the copyright holder in `LICENSE`.
+8. With the documentation site, publish it: see
    [Documentation](development.md#documentation).

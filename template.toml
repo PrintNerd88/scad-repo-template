@@ -21,6 +21,7 @@ exclude = [
   "scripts/template_sync_test.py",
   "README.md",                # the template's own README and documentation site;
   "docs/*.md",                # children get the generic ones in child/ instead
+  "docs/preview.png",         # a render of the demo, for the template's own README
 ]
 
 # Literal in this repo -> key in a child's .template.toml [values]. Substituted in
@@ -52,7 +53,6 @@ merge = [
 seed = [
   "LICENSE",
   "child/README.md",          # generic, for each project to rewrite
-  "docs/preview.png",         # the README's image, so shipped with or without docs
   "src/lib/common.scad",
   "scripts/.gitkeep",
   "src/*.scad",

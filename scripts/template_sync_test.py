@@ -17,6 +17,7 @@ from __future__ import annotations
 import contextlib
 import io
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -839,6 +840,37 @@ class SyncTests(unittest.TestCase):
 
 class RealTemplateTests(unittest.TestCase):
     ROOT = Path(__file__).resolve().parent.parent
+    # Delete these and .template.toml from a new project, and it is a blank slate.
+    DEMO_PARTS = {"src/assembly.scad", "src/cap.scad", "src/params.scad", "src/plate.scad"}
+    # What a blank slate may not mention. .env.example is .gitignore's own business.
+    NOT_NEUTRAL = re.compile(
+        r"template|sync|demo|benchmark|(?<!\.env\.)example|\b(?:plate|cap|boss|mounting|child|children)\b", re.IGNORECASE
+    )
+
+    @unittest.skipUnless((ROOT / ts.MANIFEST_NAME).is_file(), "not inside a template checkout")
+    def test_new_project_is_a_blank_slate_without_the_demo_and_config(self) -> None:
+        tmp = tempfile.TemporaryDirectory(prefix="template_sync_test-")
+        self.addCleanup(tmp.cleanup)
+        for docs in ("true", "false"):
+            with self.subTest(docs=docs):
+                project = Path(tmp.name) / f"docs-{docs}"
+                code, _out, err = run(
+                    "--template", self.ROOT, "new", project, "-y", "--force", "--no-submodules",
+                    "--set", "project=widget", "--feature", f"docs={docs}",
+                )
+                self.assertEqual(code, 0, err)
+                shipped = set(sh(project, "git", "ls-files").split())
+                self.assertLessEqual(self.DEMO_PARTS, shipped)
+                self.assertIn("template_sync.py update .", (project / ts.CHILD_CONFIG_NAME).read_text("utf-8"))
+                rest = shipped - self.DEMO_PARTS - {ts.CHILD_CONFIG_NAME}
+                hits = [p for p in rest if self.NOT_NEUTRAL.search(p)]
+                for rel in sorted(rest):
+                    data = (project / rel).read_bytes()
+                    if not ts.is_binary(data):
+                        for n, line in enumerate(data.decode("utf-8").split("\n"), 1):
+                            if self.NOT_NEUTRAL.search(line):
+                                hits.append(f"{rel}:{n}: {line}")
+                self.assertEqual(hits, [])
 
     @unittest.skipUnless((ROOT / ts.MANIFEST_NAME).is_file(), "not inside a template checkout")
     def test_manifest_classifies_every_tracked_file(self) -> None:

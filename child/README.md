@@ -1,8 +1,8 @@
 # scad-repo-template
 
-What this project makes, and what it's for, in a sentence or two.
+<!-- FIXME: what this project makes, and what it's for, in a sentence or two. -->
 
-![Rendered preview](docs/preview.png)
+<!-- FIXME: a render of it. Run `make png`, copy out/<part>.png to docs/, and link it here: ![<part>](docs/<part>.png) -->
 
 <!-- <template-only feature="docs"> -->
 ## Quick start
@@ -20,12 +20,11 @@ The documentation, from requirements to development, starts at
 <!-- <template-only feature="!docs"> -->
 ## Parts
 
+<!-- FIXME: one row per file in src/. -->
+
 | File | What it makes |
 |---|---|
-| `src/params.scad` | The measurements of every part, which each one includes |
-| `src/plate.scad` | A demo mounting plate, to replace with your own parts |
-| `src/cap.scad` | A demo cap that fits over the plate's boss, likewise |
-| `src/assembly.scad` | The parts together, to check how they fit; not printed |
+| `src/<part>.scad` | FIXME |
 
 ## Getting started
 
@@ -59,8 +58,8 @@ Everything runs through `make` from the repository root.
 | Command | Result |
 |---|---|
 | `make` / `make stl` | Renders every part in `src/` to `out/*.stl` |
-| `make png` | Renders previews of the parts and of `src/assembly.scad` into `out/`; without a display, `xvfb-run make png` |
-| `make test` | Runs `tests/*.scad`, and fails if `src/assembly.scad` no longer evaluates cleanly |
+| `make png` | Renders previews of the parts, and of `src/assembly.scad` if it exists, into `out/`; without a display, `xvfb-run make png` |
+| `make test` | Runs `tests/*.scad`, and fails if `src/assembly.scad` exists and no longer evaluates cleanly |
 | `make toolchain` | Shows which OpenSCAD is in use |
 | `make clean` | Removes `out/` |
 | `make help` | Lists the targets |
@@ -75,17 +74,6 @@ deliberately:
 ```bash
 git submodule update --remote vendor/<library>
 git commit -am "build(vendor): bump <library>"
-```
-
-## Syncing with the template
-
-This project was created from a template; `.template.toml` records the template commit
-it was last synced with. To bring in the template's later changes, commit your work,
-then run the template's sync tool from a checkout of it — here, `../template`:
-
-```bash
-uv run ../template/scripts/template_sync.py check .     # what would change
-uv run ../template/scripts/template_sync.py update .    # apply it, then review and commit
 ```
 <!-- </template-only> -->
 

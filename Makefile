@@ -2,7 +2,7 @@
 # Toolchain resolution
 #
 # Prefer openscad-nightly: it has the manifold backend, which renders CSG-heavy
-# parts far faster than CGAL (0.33 s vs 33 s on this repo's benchmark part).
+# parts far faster than CGAL.
 # Fall back to a stable `openscad` when the nightly isn't installed, and let an
 # explicit OPENSCAD=... override both.
 #
@@ -132,8 +132,8 @@ docs-serve:
 
 help:
 	@echo "make            build STLs into out/ (same as 'make stl')"
-	@echo "make png        render previews of the parts and the assembly into out/"
-	@echo "make test       run tests/*.scad and check the assembly still evaluates"
+	@echo "make png        render previews of the parts and any assembly into out/"
+	@echo "make test       run tests/*.scad and check any assembly still evaluates"
 # <template-only feature="docs">
 	@echo "make docs       build the documentation into site/"
 	@echo "make docs-serve preview the documentation at http://127.0.0.1:8000"

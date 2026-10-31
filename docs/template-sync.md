@@ -38,6 +38,9 @@ uv run ../template/scripts/template_sync.py check .
 uv run ../template/scripts/template_sync.py update .
 ```
 
+These commands are also in the comments at the top of the project's `.template.toml`, the
+only file in a project that mentions the template.
+
 If the template has gained an option the project hasn't chosen yet, such as the
 documentation site, `update` asks about it first and records the answer in
 `.template.toml`.

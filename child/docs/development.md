@@ -7,8 +7,8 @@ Everything runs through `make` from the repository root.
 | Command | Result |
 |---|---|
 | `make` / `make stl` | Renders every part in `src/` to `out/*.stl` |
-| `make png` | Renders previews of the parts and of `src/assembly.scad` into `out/`; without a display, `xvfb-run make png` |
-| `make test` | Runs `tests/*.scad`, and fails if `src/assembly.scad` no longer evaluates cleanly |
+| `make png` | Renders previews of the parts, and of `src/assembly.scad` if it exists, into `out/`; without a display, `xvfb-run make png` |
+| `make test` | Runs `tests/*.scad`, and fails if `src/assembly.scad` exists and no longer evaluates cleanly |
 | `make docs` | Builds this documentation into `site/`, failing on any warning |
 | `make docs-serve` | Serves it at <http://127.0.0.1:8000>, rebuilding on every save |
 | `make toolchain` | Shows which OpenSCAD is in use |
@@ -40,14 +40,3 @@ GitHub Pages from `main`. Publishing needs two one-time steps:
 1. In the repository's **Settings → Pages**, set **Source** to **GitHub Actions**.
 2. In `mkdocs.yml`, uncomment `site_url` and `repo_url`, and replace `<GITHUB USER>` with
    the account or organisation that owns the repository.
-
-## Syncing with the template
-
-This project was created from a template; `.template.toml` records the template commit
-it was last synced with. To bring in the template's later changes, commit your work,
-then run the template's sync tool from a checkout of it — here, `../template`:
-
-```bash
-uv run ../template/scripts/template_sync.py check .     # what would change
-uv run ../template/scripts/template_sync.py update .    # apply it, then review and commit
-```
