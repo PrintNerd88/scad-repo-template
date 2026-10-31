@@ -3,11 +3,11 @@ on: [push, pull_request]
 
 jobs:
   render:
-    # Both toolchains are built, because version differences here are real:
-    # BOSL2's diff()/tag() asserts on 2025+ where 2021.01 silently rendered
-    # nothing, and the manifold backend needs 2025+. Each job installs
-    # exactly one binary and then runs plain `make`, so the Makefile's own
-    # nightly-preferred-with-fallback resolution is what's under test.
+    # The repo targets stable and nightly, whichever versions those are today,
+    # because OpenSCAD versions differ in what they render and which backends
+    # they offer. Each job installs exactly one binary and then runs plain
+    # `make`, so the Makefile's own nightly-preferred-with-fallback resolution
+    # is what's under test.
     strategy:
       fail-fast: false
       matrix:

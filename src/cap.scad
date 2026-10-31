@@ -9,7 +9,7 @@
 // Units: millimetres. boss_cap() draws it as it sits on the boss, centred on
 // the Z axis, with the top of the boss at Z=0.
 //
-// Requires: OpenSCAD 2021.01+ (2025.x recommended), BOSL2 in vendor/.
+// Requires: OpenSCAD stable or nightly (nightly recommended), BOSL2 in vendor/.
 // Build:    make stl   |   openscad -o out/cap.stl src/cap.scad
 
 /* [Quality] */

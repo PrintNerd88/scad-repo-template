@@ -60,7 +60,7 @@ by double-clicking the file.
 
 | Tool | What it does here |
 |---|---|
-| [OpenSCAD](https://openscad.org/) | Renders the parts. The Makefile prefers `openscad-nightly`, whose manifold backend is far faster on CSG-heavy parts, and falls back to a stable `openscad`; any version from 2021.01 on works. |
+| [OpenSCAD](https://openscad.org/) | Renders the parts. The Makefile prefers `openscad-nightly`, whose manifold backend is far faster on CSG-heavy parts, and falls back to a stable `openscad`. CI builds with both. |
 | [BOSL2](https://github.com/BelfrySCAD/BOSL2) | A widely used OpenSCAD library of shapes, attachments, rounding and threading. Vendored as a submodule; the demo part uses it. |
 | [GNU Make](https://www.gnu.org/software/make/) | The one entry point for rendering, testing and building the docs. It picks which OpenSCAD to run and works around OpenSCAD's quirks — such as a failed `assert()` still exiting 0. |
 | [Git](https://git-scm.com/) | Version control, with submodules pinning each vendored library to an exact commit. |

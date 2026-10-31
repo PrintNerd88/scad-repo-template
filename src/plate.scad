@@ -7,7 +7,7 @@
 // Units: millimetres. Origin: bottom-left-front corner of the plate, Z up,
 // so the part occupies the positive octant: x in [0,l], y in [0,w], z in [0,t].
 //
-// Requires: OpenSCAD 2021.01+ (2025.x recommended), BOSL2 in vendor/.
+// Requires: OpenSCAD stable or nightly (nightly recommended), BOSL2 in vendor/.
 // Build:    make stl   |   openscad -o out/plate.stl src/plate.scad
 
 // ---------------------------------------------------------------------------

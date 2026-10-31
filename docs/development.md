@@ -86,9 +86,9 @@ no good automated STL diff in the standard toolchain. For geometry regressions, 
 renders PNGs on every push and uploads them with the STLs; compare them by eye in the
 pull request.
 
-OpenSCAD exits 0 even when an `assert()` fails (verified on both 2021.01 and the 2026.08
-nightly), so `make test` searches the echo output for `ERROR`, `WARNING` and `TRACE`
-instead of trusting the exit code.
+OpenSCAD exits 0 even when an `assert()` fails, on both stable and the nightly, so
+`make test` searches the echo output for `ERROR`, `WARNING` and `TRACE` instead of
+trusting the exit code.
 
 ## Pre-commit hooks
 

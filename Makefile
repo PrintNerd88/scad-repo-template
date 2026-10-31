@@ -34,8 +34,8 @@ ifneq ($(filter-out $(NO_SCAD_GOALS),$(or $(MAKECMDGOALS),all)),)
   endif
 endif
 
-# --backend=manifold exists only on OpenSCAD >= 2025.x (or a 2023+ dev
-# snapshot), so probe rather than assume. Older builds just render slower.
+# Not every OpenSCAD build has --backend=manifold, so probe rather than assume.
+# Builds without it just render slower.
 MANIFOLD := $(if $(strip $(OPENSCAD)),\
               $(shell $(OPENSCAD) --help 2>&1 | grep -q -- '--backend' && echo --backend=manifold))
 FLAGS    ?= $(MANIFOLD) --export-format=binstl
@@ -75,10 +75,10 @@ out/assembly.png: src/assembly.scad $(PARTS:%=src/%.scad) $(DEPS) | out
 # Every part takes its measurements from params.scad, and so does the assembly.
 $(STLS) $(PNGS) out/assembly.png: $(PARAMS)
 
-# OpenSCAD's whole test framework is assert() and echo(). Every version tested
-# (2021.01 and the 2026.08 nightly) exits 0 even when an assert fails, reporting
-# it only in the echo stream, so grep the output instead of trusting the exit
-# code. This is not a legacy workaround — do not reduce it to relying on $$?.
+# OpenSCAD's whole test framework is assert() and echo(). Both stable and the
+# nightly exit 0 even when an assert fails, reporting it only in the echo
+# stream, so grep the output instead of trusting the exit code. This is not a
+# legacy workaround — do not reduce it to relying on $$?.
 #
 # The assembly is evaluated here too, since `make stl` never builds it. This is
 # what catches it broken by a change to a part: a renamed module, a moved file

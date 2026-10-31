@@ -23,7 +23,8 @@ module __Customizer_Limit__ () {}
 // BOSL2 must be include'd here too, not just in the parts. `use <>` imports
 // modules and functions but NOT variables, and BOSL2's diff()/tag() machinery
 // reads globals like $tags_shown that std.scad defines. Without this line the
-// plate renders empty (2021.01) or fails an assert inside BOSL2 (2025+).
+// plate renders empty or fails an assert inside BOSL2, depending on the
+// OpenSCAD version.
 // params.scad is include'd for the same reason: this file needs its
 // variables, to know where the boss is.
 include <../vendor/BOSL2/std.scad>
