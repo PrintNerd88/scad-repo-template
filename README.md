@@ -12,8 +12,8 @@ changes with a small sync tool.
 
 ## Documentation
 
-Start at [docs/index.md](docs/index.md): repository shape, tools, installation, building
-and testing, and syncing with the template.
+Start at the [documentation site](https://printnerd88.github.io/scad-repo-template/):
+repository shape, tools, installation, building and testing, and syncing with the template.
 
 ## License
 
