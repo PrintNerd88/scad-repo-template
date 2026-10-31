@@ -5,7 +5,7 @@ jobs:
   render:
     # Both toolchains are built, because version differences here are real:
     # BOSL2's diff()/tag() asserts on 2025+ where 2021.01 silently rendered
-    # nothing, and only the nightly has the manifold backend. Each job installs
+    # nothing, and the manifold backend needs 2025+. Each job installs
     # exactly one binary and then runs plain `make`, so the Makefile's own
     # nightly-preferred-with-fallback resolution is what's under test.
     strategy:
@@ -15,10 +15,7 @@ jobs:
           - toolchain: nightly
             install: sudo snap install openscad-nightly
           - toolchain: stable
-            install: |
-              sudo add-apt-repository -y ppa:openscad/releases
-              sudo apt-get update
-              sudo apt-get install -y openscad
+            install: sudo snap install openscad
 
     name: render (${{ matrix.toolchain }})
     runs-on: ubuntu-latest
